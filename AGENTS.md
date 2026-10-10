@@ -38,6 +38,16 @@
 - Ant Design 主题统一经 `ConfigProvider` 配置，禁止写内联 `style`，禁止覆盖 antd 内部 class。
 - 全局状态用 zustand，避免跨层级层层透传 props。
 
+## 项目级配置优先（技能 / MCP）
+
+本项目为**多人协作**，目标：**同一仓库、同一套技能与 MCP，保证 AI 输出一致**。
+
+- **一律项目级固化**：团队需要的技能装到 `.trae/skills/`，并提交 `skills-lock.json`；队友 clone 后执行 `npx skills experimental_install` 恢复。
+- **判据**：以「团队能否随仓库稳定复现」为准，**而非**「本机是否已可用」。
+- **不得以"全局已有"为由跳过**：`~/.trae/plugins/`（plugin）、`~/.trae/skills/` 等**用户级配置不进仓库**，队友拿不到，**不能替代项目级配置**。
+- **MCP 同样适用**：必需 MCP 需随仓库分发（若 Trae 支持项目级 MCP 配置）；不支持时，须在 README/AGENTS.md 固化「必装 MCP 清单 + 参数」作为人工同步项。
+- **同名并存**：全局与项目级同名技能并存可能重复触发，属可接受代价，**不作为删除项目级配置的理由**。
+
 ## 边界（不要修改）
 
 - `dist/`、`node_modules/`、`pnpm-lock.yaml`。
