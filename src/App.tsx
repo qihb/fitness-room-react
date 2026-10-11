@@ -1,4 +1,4 @@
-import { ConfigProvider } from "antd";
+import { App as AntdApp, ConfigProvider } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import dayjs from "dayjs";
 import { RouterProvider } from "react-router";
@@ -23,7 +23,10 @@ export default function App() {
         },
       }}
     >
-      <RouterProvider router={router} />
+      {/* antd App：为 message/notification 等提供上下文，保证主题生效。 */}
+      <AntdApp className="h-full">
+        <RouterProvider router={router} />
+      </AntdApp>
     </ConfigProvider>
   );
 }

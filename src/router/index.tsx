@@ -1,9 +1,13 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { BasicLayout } from "@/layouts/basic-layout";
 import { RouteErrorBoundary } from "./error-boundary";
 import { RequireAuth } from "./guard";
 
-/** 全应用路由表：数据路由 + 路由级懒加载 + 多层错误兜底。 */
+/** 全应用路由表：数据路由 + 路由级懒加载 + 多层错误兜底。
+ *  - `/login` 公开；
+ *  - `/` 受守卫保护，内层为后台布局；
+ *  - `*` 未匹配 → 404。
+ */
 export const router = createBrowserRouter([
   {
     path: "/login",
@@ -19,25 +23,14 @@ export const router = createBrowserRouter([
         Component: BasicLayout,
         ErrorBoundary: RouteErrorBoundary,
         children: [
-          {
-            index: true,
-            lazy: async () => ({ Component: (await import("@/pages/dashboard")).DashboardPage }),
-          },
-          {
-            path: "members",
-            lazy: async () => ({ Component: (await import("@/pages/member")).MemberPage }),
-          },
+          { index: true, element: <Navigate to="/orders" replace /> },
           {
             path: "orders",
-            lazy: async () => ({ Component: (await import("@/pages/order")).OrderPage }),
+            lazy: async () => ({ Component: (await import("@/pages/order")).OrderListPage }),
           },
           {
-            path: "settings",
-            lazy: async () => ({ Component: (await import("@/pages/settings")).SettingsPage }),
-          },
-          {
-            path: "demo",
-            lazy: async () => ({ Component: (await import("@/pages/demo")).DemoPage }),
+            path: "orders/new",
+            lazy: async () => ({ Component: (await import("@/pages/order/new")).OrderNewPage }),
           },
         ],
       },

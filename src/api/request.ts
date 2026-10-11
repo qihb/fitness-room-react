@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useAuthStore } from "@/store/auth";
+import { mockAdapter } from "./mock";
 
 /**
  * 全项目唯一的 axios 实例。
@@ -9,6 +10,11 @@ export const request = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api",
   timeout: 10000,
 });
+
+// 启用 mock：默认开启，显式设 `VITE_USE_MOCK=false` 可关闭并走真实接口。
+if (import.meta.env.VITE_USE_MOCK !== "false") {
+  request.defaults.adapter = mockAdapter;
+}
 
 // 请求拦截：统一注入鉴权头（token 由全局登录态持有）。
 request.interceptors.request.use((config) => {
