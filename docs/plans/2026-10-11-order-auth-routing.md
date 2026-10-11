@@ -74,3 +74,10 @@
 - 校验：`pnpm exec vp check` 全绿（35 文件格式 + 22 文件零告警）；`pnpm exec vp test` 2 passed；浏览器端到端走查 6/6 通过。
 - 额外修复：新建页原用 antd `message` 静态方法会触发 `[antd: message] Static function can not consume context` 告警 → 在 `App.tsx` 加 `<App>` 包裹、新建页改用 `App.useApp()`，告警消失；退出下拉开菜单由 hover 改为 `trigger={["click"]}`。
 - 已知非阻断项：视口 <992px 时 antd `Sider`（`breakpoint="lg" collapsedWidth="0"`）自动收起为 0 宽（既有配置，桌面宽度正常）；react-router 提示未配 `HydrateFallback`（不影响）。
+
+---
+
+## 追加调整（2026-10-11）
+
+- [x] A1 凭证方式改为 **Bearer Token**（不使用 Cookie）：更新 `src/store/auth.ts` 注释与 `.trae/skills/react-app-architecture/SKILL.md` 安全条款；代码本就走 `Authorization: Bearer <token>`，无逻辑变更。
+- [x] A2 三类异常状态独立落地：新增 `src/pages/forbidden`（403 无权限）、`src/pages/server-error`（500 服务器错误），保留 `src/pages/not-found`（404）；`src/router/error-boundary.tsx` 按 403/404/500 渲染对应独立页；`src/router/index.tsx` 增加公开路由 `/403`、`/500`（便于直访/联调）。

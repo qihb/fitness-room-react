@@ -83,7 +83,7 @@ src/
 
 ## 安全
 
-- **不在前端存敏感凭证**：token 优先走 HttpOnly Cookie；确需前端持有则评估 XSS 风险。
+- **不在前端存敏感凭证**：鉴权统一用 **Bearer Token**（请求头 `Authorization: Bearer <token>`，**不使用 Cookie**）；token 落 localStorage 等前端存储时需评估 XSS 风险。
 - **防 XSS**：默认依赖 React 转义，**禁止**对不可信内容使用 `dangerouslySetInnerHTML`；确需富文本则先净化。
 - **越权防护**：敏感操作以**后端鉴权为准**，前端权限控制只做体验优化（按钮隐藏/禁用），不作为安全边界。
 - **权限模型**：采用 **PBAC（基于权限点）** 优于硬编码 RBAC；集中定义权限点，用统一的 `useAuthorization`/`<Authorized>` 判断（放 `components/` 或全局 hooks）。
