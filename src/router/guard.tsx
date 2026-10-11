@@ -12,3 +12,14 @@ export function RequireAuth() {
 
   return <Outlet />;
 }
+
+/** 访客守卫：已登录用户不应再停留登录页，访问 `/login` 一律重定向回后台。 */
+export function GuestOnly() {
+  const token = useAuthStore((state) => state.token);
+
+  if (token) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Outlet />;
+}

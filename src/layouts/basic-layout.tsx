@@ -1,10 +1,14 @@
 import {
+  FireOutlined,
   LogoutOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   PlusOutlined,
   UnorderedListOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Avatar, Breadcrumb, Dropdown, Layout, Menu, Space, Typography } from "antd";
+import { Avatar, Breadcrumb, Button, Dropdown, Layout, Menu, Space } from "antd";
+import { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { useAuthStore } from "@/store/auth";
 
@@ -19,10 +23,13 @@ const menuItems = [
 export function BasicLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const [collapsed, setCollapsed] = useState(false);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
   const isNewOrder = pathname.startsWith("/orders/new");
+  const isOrderList = pathname === "/orders";
+  const isOrderRoute = isOrderList || isNewOrder;
   const selectedKey = isNewOrder ? "/orders/new" : "/orders";
   const breadcrumbItems = isNewOrder
     ? [{ title: <Link to="/orders">订单列表</Link> }, { title: "新建订单" }]
@@ -30,17 +37,31 @@ export function BasicLayout() {
 
   return (
     <Layout className="h-full">
-      <Sider theme="dark" breakpoint="lg" collapsedWidth="0">
+      <Sider
+        theme="dark"
+        breakpoint="lg"
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        collapsedWidth="80"
+      >
         <div className="flex h-16 items-center justify-center text-lg font-semibold text-white">
-          健身房后台
+          {collapsed ? <FireOutlined className="text-base" /> : "健身房后台"}
         </div>
-        <Menu theme="dark" mode="inline" selectedKeys={[selectedKey]} items={menuItems} />
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={isOrderRoute ? [selectedKey] : []}
+          items={menuItems}
+        />
       </Sider>
       <Layout>
         <Header className="flex items-center justify-between px-6">
-          <Typography.Title level={4} className="!mb-0">
-            管理后台
-          </Typography.Title>
+          <Button
+            type="text"
+            aria-label={collapsed ? "展开菜单" : "收起菜单"}
+            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={() => setCollapsed(!collapsed)}
+          />
           <Dropdown
             trigger={["click"]}
             menu={{
@@ -64,7 +85,7 @@ export function BasicLayout() {
           </Dropdown>
         </Header>
         <Content className="flex flex-col gap-4 overflow-hidden p-6">
-          <Breadcrumb className="shrink-0" items={breadcrumbItems} />
+          {isOrderRoute && <Breadcrumb className="shrink-0" items={breadcrumbItems} />}
           <div className="min-h-0 flex-1 overflow-auto">
             <Outlet />
           </div>
