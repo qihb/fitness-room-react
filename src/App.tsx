@@ -1,14 +1,23 @@
 import { App as AntdApp, ConfigProvider } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import dayjs from "dayjs";
+import { useEffect } from "react";
 import { RouterProvider } from "react-router";
 import "dayjs/locale/zh-cn";
 import { FeedbackBridge } from "@/api/feedback";
 import { router } from "@/router";
+import { useAuthStore } from "@/store/auth";
 
 dayjs.locale("zh-cn");
 
 export default function App() {
+  const refreshPermissions = useAuthStore((state) => state.refreshPermissions);
+
+  // 启动 / 刷新时按 token 重新获取权限点，保证读到最新权限而非 localStorage 旧值。
+  useEffect(() => {
+    refreshPermissions();
+  }, [refreshPermissions]);
+
   return (
     <ConfigProvider
       locale={zhCN}
