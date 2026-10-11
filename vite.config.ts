@@ -1,16 +1,44 @@
-import { defineConfig } from "vite-plus";
+import { fileURLToPath } from "node:url";
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig, loadEnv } from "vite-plus";
 
-export default defineConfig({
-  staged: {
-    "*": "vp check --fix",
-  },
-  fmt: {
-    // .trae/ 为 IDE 配置与随仓库分发的技能（外部内容），不纳入项目格式化。
-    ignorePatterns: [".trae/**"],
-  },
-  lint: {
-    jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
-    rules: { "vite-plus/prefer-vite-plus-imports": "error" },
-    options: { typeAware: true, typeCheck: true },
-  },
+export default defineConfig(({ mode }) => {
+  // 读取 .env* 中的变量（prefix 置空，兼顾 VITE_ 前缀与代理目标）。
+  const env = loadEnv(mode, process.cwd(), "");
+
+  return {
+    plugins: [react(), tailwindcss()],
+    resolve: {
+      alias: {
+        "@": fileURLToPath(new URL("./src", import.meta.url)),
+      },
+    },
+    server: {
+      proxy: {
+        // 开发环境把 /api 转发到后端，避免跨域；生产环境由网关/同域处理。
+        "/api": {
+          target: env.VITE_API_PROXY_TARGET || "http://localhost:8080",
+          changeOrigin: true,
+        },
+      },
+    },
+    staged: {
+      "*": "vp check --fix",
+    },
+    test: {
+      include: ["src/**/*.test.{ts,tsx}"],
+    },
+    fmt: {
+      // .trae/ 为 IDE 配置与随仓库分发的技能（外部内容），不纳入项目格式化。
+      ignorePatterns: [".trae/**"],
+    },
+    lint: {
+      // 默认插件为 eslint/typescript/unicorn/oxc，设置 plugins 会覆盖默认集，故需显式列全。
+      plugins: ["eslint", "typescript", "unicorn", "oxc", "react"],
+      jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
+      rules: { "vite-plus/prefer-vite-plus-imports": "error" },
+      options: { typeAware: true, typeCheck: true },
+    },
+  };
 });

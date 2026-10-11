@@ -1,6 +1,46 @@
 # fitness-room-react
 
-健身房会员办卡订单管理模块
+健身房会员办卡订单管理模块（前端）。
+
+## 技术栈
+
+React 19 · TypeScript 6 · Vite+ 1.1 · react-router 8（Data Mode）· Ant Design 6 · axios · zustand 5 · Tailwind CSS 4。包管理器为 **pnpm**。
+
+## 快速开始
+
+```bash
+pnpm install
+pnpm dev        # 本地开发（默认 http://localhost:5173）
+pnpm build      # 构建（tsc && vp build）
+pnpm test       # 运行测试（Vitest）
+pnpm exec vp check   # 格式化 + lint + 类型检查
+```
+
+克隆后如恢复 AI 技能，见文末「AI 技能与 MCP」。
+
+## 环境变量
+
+复制 `.env.example` 为 `.env`（已被 `.gitignore` 忽略）：
+
+| 变量                    | 说明                                                           |
+| ----------------------- | -------------------------------------------------------------- |
+| `VITE_API_BASE_URL`     | 接口基础路径；默认同域 `/api`，可填绝对地址                    |
+| `VITE_API_PROXY_TARGET` | 开发代理目标；`vite dev server` 把 `/api` 转发到这里，避免跨域 |
+
+## 目录结构
+
+```
+src/
+├── api/          # 唯一 axios 实例（request.ts）与通用类型（types.ts）
+├── features/     # 按业务领域分层；外部只能经 @/features/<feature>（index.ts）导入
+├── pages/        # 页面
+├── layouts/      # 布局
+├── router/       # 路由表（createBrowserRouter）+ 守卫 + ErrorBoundary
+├── store/        # 跨 feature 的 zustand store
+└── styles/       # Tailwind 分层入口
+```
+
+架构与编码规范详见 [AGENTS.md](./AGENTS.md) 与技能 `.trae/skills/react-app-architecture/`。
 
 ## AI 技能与 MCP（项目级）
 

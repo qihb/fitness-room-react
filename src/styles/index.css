@@ -1,0 +1,26 @@
+/*
+ * Tailwind v4 分层导入（CSS-first）。
+ * 刻意「不」引入 tailwindcss/preflight，改由 antd 的 reset 承担基础样式，
+ * 避免两者对 button / border 等基础元素的双重重置而破坏 antd 组件外观。
+ * antd reset 归入 base 层，保证 Tailwind utilities 仍可正常覆盖。
+ */
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "antd/dist/reset.css" layer(base);
+
+/* 项目级设计令牌：仅放 Tailwind 侧的自定义变量，antd 主题以 ConfigProvider token 为准。 */
+@theme {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+}
