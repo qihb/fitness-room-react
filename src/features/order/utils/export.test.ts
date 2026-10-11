@@ -23,7 +23,7 @@ describe("order export", () => {
     expect(escapeCsvField("含\n换行")).toBe('"含\n换行"');
   });
 
-  it("生成带 BOM 的 CSV：表头固定、金额千分位、内容转义", () => {
+  it("生成带 BOM 的 CSV：表头固定、金额千分位、内容转义、长数字列强制文本", () => {
     const content = buildOrdersCsv([
       makeOrder({ orderNo: "A1", status: "completed", amount: 12000 }),
       makeOrder({
@@ -37,8 +37,12 @@ describe("order export", () => {
     const lines = content.replace(/^\uFEFF/, "").split("\r\n");
     expect(content.startsWith("\uFEFF")).toBe(true);
     expect(lines[0]).toBe("订单号,会员姓名,手机号,购卡年限,订单金额,状态,创建时间");
-    expect(lines[1]).toBe('A1,张三,13810000000,1,"12,000.00",已完成,2026-10-11 09:00');
-    expect(lines[2]).toBe('A4,"王,五""",13810000000,1,0.00,待寄卡,2026-10-11 09:00');
+    expect(lines[1]).toBe(
+      '"=""A1""",张三,"=""13810000000""",1,"12,000.00",已完成,"=""2026-10-11 09:00"""',
+    );
+    expect(lines[2]).toBe(
+      '"=""A4""","王,五""","=""13810000000""",1,0.00,待寄卡,"=""2026-10-11 09:00"""',
+    );
   });
 
   it("空列表只保留表头", () => {
