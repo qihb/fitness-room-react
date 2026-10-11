@@ -28,8 +28,8 @@ export function OrderNewPage() {
       await createOrder(values);
       message.success("订单创建成功");
       void navigate("/orders");
-    } catch (cause) {
-      message.error(cause instanceof Error ? cause.message : "创建失败");
+    } catch {
+      // 失败提示已由响应拦截器统一处理。
     } finally {
       setSubmitting(false);
     }

@@ -1,4 +1,4 @@
-import { AxiosHeaders, getAdapter } from "axios";
+import { AxiosError, AxiosHeaders, getAdapter } from "axios";
 import axios from "axios";
 import dayjs from "dayjs";
 import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from "axios";
@@ -34,6 +34,8 @@ interface MockOrder {
 }
 
 const PRICE_PER_YEAR = 1200;
+const DISCOUNT_THRESHOLD_YEARS = 5;
+const DISCOUNT_RATE = 0.8;
 const MIN_YEARS = 1;
 const MAX_YEARS = 10;
 
@@ -45,81 +47,106 @@ const TAB_STATUS: Record<string, MockStatus[]> = {
   cancelled: ["cancelled"],
 };
 
-/** 种子数据：覆盖全部 6 种状态，并含 0 与空值金额。 */
-const seedOrders: MockOrder[] = [
-  {
-    orderNo: "20261011001",
-    memberName: "张三",
-    phone: "13800000001",
-    years: 1,
-    amount: 1200,
-    status: "pendingAudit",
-    createdAt: "2026-10-11 09:12",
-  },
-  {
-    orderNo: "20261010002",
-    memberName: "李四",
-    phone: "13800000002",
-    years: 3,
-    amount: 3600,
-    status: "pendingCard",
-    createdAt: "2026-10-10 14:30",
-  },
-  {
-    orderNo: "20261009003",
-    memberName: "王五",
-    phone: "13800000003",
-    years: 5,
-    amount: 4800,
-    status: "pendingShip",
-    createdAt: "2026-10-09 18:05",
-  },
-  {
-    orderNo: "20261008004",
-    memberName: "赵六",
-    phone: "13800000004",
-    years: 2,
-    amount: 2400,
-    status: "expired",
-    createdAt: "2026-10-08 11:48",
-  },
-  {
-    orderNo: "20261007005",
-    memberName: "钱七",
-    phone: "13800000005",
-    years: 1,
-    amount: 0,
-    status: "expired",
-    createdAt: "2026-10-07 10:20",
-  },
-  {
-    orderNo: "20261006006",
-    memberName: "孙八",
-    phone: "13800000006",
-    years: 4,
-    amount: null,
-    status: "completed",
-    createdAt: "2026-10-06 16:40",
-  },
-  {
-    orderNo: "20261005007",
-    memberName: "周九",
-    phone: "13800000007",
-    years: 2,
-    amount: 2400,
-    status: "cancelled",
-    createdAt: "2026-10-05 08:15",
-  },
-  {
-    orderNo: "20261004008",
-    memberName: "张三丰",
-    phone: "13800000008",
-    years: 1,
-    amount: 1200,
-    status: "completed",
-    createdAt: "2026-10-04 20:05",
-  },
+/** 种子基准日：最新一条；其余按天递减，保证排序与分页稳定可复现。 */
+const SEED_BASE_DATE = "2026-10-11 09:00";
+
+/** 会员姓名池：故意保留少量重名，便于「姓名模糊搜索」演示。 */
+const MEMBER_NAMES = [
+  "张三",
+  "李四",
+  "王五",
+  "赵六",
+  "钱七",
+  "孙八",
+  "周九",
+  "吴十",
+  "郑十一",
+  "王芳",
+  "李娜",
+  "张伟",
 ];
+
+interface SeedSpec {
+  status: MockStatus;
+  years: number;
+  /** 覆盖金额：用于构造 0 / null 边界样本；缺省按年限计价（≥5 年 8 折）。 */
+  amount?: number | null;
+}
+
+/**
+ * 种子规格：共 42 条（> 30），覆盖全部 6 种状态
+ * 进行中 24（待审核/待制卡/待寄卡 各 8）、已到期 8、已完成 6、已取消 4。
+ */
+const SEED_SPECS: SeedSpec[] = [
+  // 待审核 × 8
+  { status: "pendingAudit", years: 1 },
+  { status: "pendingAudit", years: 3 },
+  { status: "pendingAudit", years: 5 },
+  { status: "pendingAudit", years: 2 },
+  { status: "pendingAudit", years: 1 },
+  { status: "pendingAudit", years: 10 },
+  { status: "pendingAudit", years: 4 },
+  { status: "pendingAudit", years: 2 },
+  // 待制卡 × 8
+  { status: "pendingCard", years: 1 },
+  { status: "pendingCard", years: 2 },
+  { status: "pendingCard", years: 6 },
+  { status: "pendingCard", years: 3 },
+  { status: "pendingCard", years: 1 },
+  { status: "pendingCard", years: 5 },
+  { status: "pendingCard", years: 2 },
+  { status: "pendingCard", years: 4 },
+  // 待寄卡 × 8
+  { status: "pendingShip", years: 1 },
+  { status: "pendingShip", years: 7 },
+  { status: "pendingShip", years: 2 },
+  { status: "pendingShip", years: 3 },
+  { status: "pendingShip", years: 1 },
+  { status: "pendingShip", years: 5 },
+  { status: "pendingShip", years: 2 },
+  { status: "pendingShip", years: 4 },
+  // 已到期 × 8（含 0 金额样本）
+  { status: "expired", years: 1 },
+  { status: "expired", years: 2, amount: 0 },
+  { status: "expired", years: 3 },
+  { status: "expired", years: 5 },
+  { status: "expired", years: 1 },
+  { status: "expired", years: 4 },
+  { status: "expired", years: 2 },
+  { status: "expired", years: 8 },
+  // 已完成 × 6（含 null 金额样本）
+  { status: "completed", years: 3, amount: null },
+  { status: "completed", years: 1 },
+  { status: "completed", years: 6 },
+  { status: "completed", years: 2 },
+  { status: "completed", years: 5 },
+  { status: "completed", years: 1 },
+  // 已取消 × 4
+  { status: "cancelled", years: 2 },
+  { status: "cancelled", years: 1 },
+  { status: "cancelled", years: 3 },
+  { status: "cancelled", years: 5 },
+];
+
+/** 按年限计价：≥ 5 年打 8 折。 */
+function calcAmount(years: number): number {
+  const base = years * PRICE_PER_YEAR;
+  return years >= DISCOUNT_THRESHOLD_YEARS ? Math.round(base * DISCOUNT_RATE) : base;
+}
+
+/** 种子数据：6 种状态全覆盖，含 0 / null 金额与重名会员。 */
+const seedOrders: MockOrder[] = SEED_SPECS.map((spec, index) => {
+  const date = dayjs(SEED_BASE_DATE).subtract(index, "day");
+  return {
+    orderNo: `${date.format("YYYYMMDD")}${String(index + 1).padStart(3, "0")}`,
+    memberName: MEMBER_NAMES[index % MEMBER_NAMES.length],
+    phone: `138${String(10000000 + index)}`,
+    years: spec.years,
+    amount: spec.amount === undefined ? calcAmount(spec.years) : spec.amount,
+    status: spec.status,
+    createdAt: date.format("YYYY-MM-DD HH:mm"),
+  };
+});
 
 /** 内存态数据：写操作会直接改内存（刷新后重置）。 */
 const orders: MockOrder[] = [...seedOrders];
@@ -147,8 +174,34 @@ function respond<T>(
   };
 }
 
-function fail(config: InternalAxiosRequestConfig, message: string): AxiosResponse {
-  return respond(config, { code: 1, message, data: null }, 400);
+/**
+ * 抛出 AxiosError：自定义 adapter 直接 resolve 会绕过 axios 内置的 validateStatus，
+ * 导致 4xx/5xx 被当作成功。这里显式抛错，交由响应拦截器的失败分支统一处理。
+ */
+function reject(config: InternalAxiosRequestConfig, message: string, status: number): never {
+  throw new AxiosError(
+    message,
+    status >= 500 ? "ERR_BAD_RESPONSE" : "ERR_BAD_REQUEST",
+    config,
+    null,
+    respond(config, { code: status, message, data: null }, status),
+  );
+}
+
+/** 400 业务失败（如不满足续卡/撤单条件）。 */
+function fail(config: InternalAxiosRequestConfig, message: string): never {
+  reject(config, message, 400);
+}
+
+/** 401 未授权：供登录态失效流程联调。 */
+function unauthorized(config: InternalAxiosRequestConfig): never {
+  reject(config, "登录已过期", 401);
+}
+
+/** 读取请求头中的 Authorization（AxiosHeaders 用 get 取值最稳）。 */
+function readAuthorization(config: InternalAxiosRequestConfig): string | undefined {
+  const value = config.headers.get("Authorization");
+  return typeof value === "string" ? value : undefined;
 }
 
 /** GET /orders：Tab 筛选 + 订单号精确 + 姓名模糊 + 创建时间倒序 + 分页。 */
@@ -200,11 +253,11 @@ function createOrder(config: InternalAxiosRequestConfig): AxiosResponse {
   const years = Number(body.years);
 
   const order: MockOrder = {
-    orderNo: `20261011${String(nextId).padStart(3, "0")}`,
+    orderNo: `${dayjs().format("YYYYMMDD")}${String(nextId).padStart(3, "0")}`,
     memberName: body.memberName,
     phone: body.phone,
     years,
-    amount: years * PRICE_PER_YEAR,
+    amount: calcAmount(years),
     status: "pendingAudit",
     createdAt: dayjs().format("YYYY-MM-DD HH:mm"),
   };
@@ -263,23 +316,33 @@ function cancelOrders(config: InternalAxiosRequestConfig): AxiosResponse {
 
 export const mockAdapter: AxiosAdapter = async (config) => {
   const method = (config.method ?? "get").toLowerCase();
+  const url = config.url;
 
-  if (config.url === "/orders") {
+  const isOrders = url === "/orders";
+  const isRenew = url === "/orders/renew" && method === "post";
+  const isCancel = url === "/orders/cancel" && method === "post";
+
+  if (isOrders || isRenew || isCancel) {
     await delay(300);
-    if (method === "get") {
+
+    // 401 模拟：无 token 或非法 token（`Bearer invalid`）时拒绝，便于验证登录态失效流程。
+    const authorization = readAuthorization(config);
+    if (!authorization || authorization === "Bearer invalid") {
+      return unauthorized(config);
+    }
+
+    if (isOrders && method === "get") {
       return listOrders(config);
     }
-    if (method === "post") {
+    if (isOrders && method === "post") {
       return createOrder(config);
     }
-  }
-  if (config.url === "/orders/renew" && method === "post") {
-    await delay(300);
-    return renewOrders(config);
-  }
-  if (config.url === "/orders/cancel" && method === "post") {
-    await delay(300);
-    return cancelOrders(config);
+    if (isRenew) {
+      return renewOrders(config);
+    }
+    if (isCancel) {
+      return cancelOrders(config);
+    }
   }
 
   return fallbackAdapter(config);

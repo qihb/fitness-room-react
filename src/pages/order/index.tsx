@@ -190,8 +190,8 @@ export function OrderListPage() {
           message.success("撤单成功");
           clearSelection();
           reload();
-        } catch (cause) {
-          message.error(cause instanceof Error ? cause.message : "撤单失败");
+        } catch {
+          // 失败提示已由响应拦截器统一处理。
         }
       },
     });

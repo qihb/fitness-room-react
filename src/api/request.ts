@@ -1,5 +1,7 @@
 import axios from "axios";
+import { router } from "@/router";
 import { useAuthStore } from "@/store/auth";
+import { feedback } from "./feedback";
 import { mockAdapter } from "./mock";
 
 /**
@@ -25,13 +27,34 @@ request.interceptors.request.use((config) => {
   return config;
 });
 
-// 响应拦截：把 axios 错误归一化为 Error，由调用方就地处理。
+/** 401 处理防抖：并发请求同时失败时，只清一次登录态 / 跳一次登录页 / 提示一次。 */
+let handlingUnauthorized = false;
+
+// 响应拦截：统一错误提示；401 清登录态并跳回登录页，其余错误归一化为 Error 交由调用方处理。
 request.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
     const message = axios.isAxiosError(error)
       ? ((error.response?.data as { message?: string } | undefined)?.message ?? error.message)
       : "网络异常";
+
+    if (status === 401) {
+      if (!handlingUnauthorized) {
+        handlingUnauthorized = true;
+        useAuthStore.getState().logout();
+        feedback.error("登录已过期，请重新登录");
+        void router.navigate("/login", { replace: true });
+        // 跳转后复位，允许新会话再次触发。
+        window.setTimeout(() => {
+          handlingUnauthorized = false;
+        }, 1000);
+      }
+    } else {
+      // 非 401 错误统一在此提示一次，调用方无需重复弹提示。
+      feedback.error(message);
+    }
+
     return Promise.reject(new Error(message));
   },
 );

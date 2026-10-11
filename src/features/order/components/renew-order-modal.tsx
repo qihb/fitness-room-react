@@ -32,8 +32,8 @@ export function RenewOrderModal({ open, orderNos, onCancel, onSuccess }: RenewOr
       await renewOrders({ orderNos, years: values.years });
       message.success(`已完成 ${orderNos.length} 笔订单续卡`);
       onSuccess();
-    } catch (cause) {
-      message.error(cause instanceof Error ? cause.message : "续卡失败");
+    } catch {
+      // 失败提示已由响应拦截器统一处理。
     } finally {
       setSubmitting(false);
     }
