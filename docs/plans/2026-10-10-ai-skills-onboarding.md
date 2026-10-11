@@ -31,20 +31,29 @@
 
 ## 阶段 2 · 栈绑定技能接入（项目级 `.trae/skills/`）
 
-- [ ] 2.1 `ant-design/ant-design-cli@antd` — antd 官方技能（skill 名 `antd`）+ **官方 MCP**（两者都配，见下方「2.1 说明」）。**栈绑定，最高价值。**
-- [ ] 2.2 `remix-run/react-router@react-router` — 官方新技能，覆盖 Framework / Data / Declarative / RSC 四种模式，对应本项目 `createBrowserRouter`（取代已归档的 `remix-run/agent-skills@react-router-data-mode`）。**栈绑定。**
-- [ ] 2.3 `vercel-labs/skills@find-skills` — 元技能（找/装技能）。**项目级保留**，以对齐团队环境。
+> **完成（2026-10-11）**：3 个技能已由用户手动下载落盘至 `.trae/skills/`；antd MCP 已落库 `.trae/mcp.json`（项目级）。
+
+- [x] 2.1 `ant-design/ant-design-cli@antd` — antd 官方技能（skill 名 `antd`）+ **官方 MCP**（两者都配，见下方「2.1 说明」）。**栈绑定，最高价值。**（skill 已落盘；MCP 已落库 `.trae/mcp.json`）
+- [x] 2.2 `remix-run/react-router@react-router` — 官方新技能，覆盖 Framework / Data / Declarative / RSC 四种模式，对应本项目 `createBrowserRouter`（取代已归档的 `remix-run/agent-skills@react-router-data-mode`）。**栈绑定。**
+- [x] 2.3 `vercel-labs/skills@find-skills` — 元技能（找/装技能）。**项目级保留**，以对齐团队环境。
 
 > **2.1 说明**：官方 skill 与 MCP 是两件事。
 >
 > - Skill：`npx skills add ant-design/ant-design-cli --skill antd -a trae -y`（仓库 `ant-design/ant-design-cli`，仅 1 个技能 `antd`）。
-> - MCP：`@ant-design/cli`（npm 包，v6.3.5+）提供 8 工具/2 提示词，需在 Trae 的 MCP 配置里加：`{"command":"npx","args":["-y","@ant-design/cli","mcp"]}`。
+> - MCP：`@ant-design/cli`（npm 包，v6.3.5+）提供 8 工具/2 提示词。**已确认 Trae 支持项目级 MCP**，落库到 `.trae/mcp.json`（官方格式带 `mcpServers` 包裹，采用 `@ant-design/cli` 官方推荐配置）：
+>
+>   ```json
+>   { "mcpServers": { "antd": { "command": "npx", "args": ["-y", "@ant-design/cli", "mcp"] } } }
+>   ```
+>
+>   启用：Trae `设置 > MCP` → 打开「启用项目级 MCP」。注：`.trae/` 受 IDE 写保护，`.trae/mcp.json` 需**用户侧创建**（AI 无写权限）。
 
-## MCP 一致性（新增 · 待确认）
+## MCP 一致性（已确认 · 2026-10-11）
 
-- **现状**：项目 `.trae/` 下只有 `skills/`，**无任何 MCP 配置文件，也无 `skills-lock.json`**。MCP 通常为用户级配置、不在仓库。
-- **风险**：技能可随 `skills-lock.json` 复现，但 **MCP 无法由仓库保证一致** → 队友可能少了 antd MCP。
-- **待确认**：Trae 是否支持**项目级 MCP 配置**（可进仓库）？若支持 → 落库；若不支持 → 至少在 `AGENTS.md`/README 固化「必装 MCP 清单 + `@ant-design/cli` 参数」，作为人工同步步骤。
+- **结论**：Trae **支持项目级 MCP 配置**——项目根 `.trae/mcp.json`（官方格式带 `mcpServers` 包裹），随仓库分发、队友一致。
+- **落地**：本项目落库 `.trae/mcp.json`，含 antd MCP（`npx -y @ant-design/cli mcp`）。
+- **启用前提**：Trae `设置 > MCP` → 打开「启用项目级 MCP」；`.trae/mcp.json` 受 IDE 写保护，需用户侧创建。
+- **参考**：https://docs.trae.cn/ide/add-mcp-servers （「项目级 MCP Server」小节）。
 
 ## 阶段 3 · bulletproof-react 规范接入
 
@@ -123,7 +132,7 @@ npx skills experimental_install
 
 **无删除项**（原收敛已作废）。
 **常驻开销**：9 个技能描述常驻（≈几百 token~1K），被触发时才读正文；相比"团队不一致"的代价可忽略。
-**附带待办**：MCP 一致性 → 见「MCP 一致性」小节，需确认 Trae 是否支持项目级 MCP 配置。
+**附带待办**：MCP 一致性 → **已确认**：Trae 支持项目级 MCP（`.trae/mcp.json`），见「MCP 一致性」小节。
 
 ---
 
@@ -131,7 +140,8 @@ npx skills experimental_install
 
 - 阶段 0 已确认完成；清单**修订为「全部项目级固化」**（原"收敛删除"方案作废）。
 - **阶段 1 已完成（2026-10-11）**：1.1–1.5 共 7 个技能已手动下载至 `.trae/skills/`，`skills-lock.json` 已生成。已落盘目录：`vercel-react-best-practices`、`tailwind-design-system`、`typescript-advanced-types`、`tdd`、`baseline-ui`、`fixing-accessibility`、`web-design-guidelines`。
-- **阶段 2–3 待用户指定步骤后执行**。
+- **阶段 2 已完成（2026-10-11）**：`antd` / `react-router` / `find-skills` 三个技能已落盘 `.trae/skills/`，`skills-lock.json` 已更新（共 10 个技能）；antd MCP 已落库 `.trae/mcp.json`（需在 Trae 设置中开启「启用项目级 MCP」）。
+- **阶段 3 待用户指定步骤后执行**。
 
 ## 待确认决策（均已确认）
 
@@ -145,9 +155,9 @@ npx skills experimental_install
 8. ~~**1.5 补充**~~ ✅ 新增 `vercel-labs/agent-skills@web-design-guidelines`。
 9. ~~**2.2 归档仓库**~~ ✅ 改用官方新技能 `remix-run/react-router@react-router`（56.6K★，活跃）。
 10. ~~**清单取舍判据**~~ ✅ **以「团队能否随仓库稳定复现」为准**：全部必需技能项目级固化，不依赖任何全局配置。
-11. **MCP 一致性** ⏳ 待确认：Trae 是否有项目级 MCP 配置可落库。
+11. ~~**MCP 一致性**~~ ✅ **是**：Trae 支持项目级 MCP，落库 `.trae/mcp.json`（带 `mcpServers` 包裹），需在设置中开启「启用项目级 MCP」。
 
 ## 下一步
 
-- 阶段 1 已完成并随本次提交入库（技能目录 + `skills-lock.json`）。
-- **待用户指定后续步骤**（如「执行 2.1 2.2 2.3」或「做阶段 3」）；并请确认 Trae 的项目级 MCP 机制。
+- 阶段 2 已完成：校验通过，待提交（技能目录 + `.trae/mcp.json` + `skills-lock.json` + 本计划文档）。
+- 阶段 3（bulletproof-react 裁剪为 `react-app-architecture`）待用户指定后再执行。

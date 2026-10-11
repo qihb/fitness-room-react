@@ -1,17 +1,35 @@
 {
   "version": 1,
   "skills": {
+    "antd": {
+      "source": "ant-design/ant-design-cli",
+      "sourceType": "github",
+      "skillPath": "skills/antd/SKILL.md",
+      "computedHash": "b5ba1145c24be0fd8f03714d3cfdaf8b9f93d8e8ef441c756709561d072ced27"
+    },
     "baseline-ui": {
       "source": "ibelick/ui-skills",
       "sourceType": "github",
       "skillPath": "skills/baseline-ui/SKILL.md",
       "computedHash": "dfcb3e778b57ad1cba92375689bb8265fa5aef78fba523a744f5220b3c619901"
     },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "b146008599c31057cef1c145774cea5d5afb30e8f43fa802e47a4b461419aaaf"
+    },
     "fixing-accessibility": {
       "source": "ibelick/ui-skills",
       "sourceType": "github",
       "skillPath": "skills/fixing-accessibility/SKILL.md",
       "computedHash": "4fa8f5a772b4eef3d28a54c136b507d070e54e2c326578f65eaf5e5a0118b38a"
+    },
+    "react-router": {
+      "source": "remix-run/react-router",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/react-router/SKILL.md",
+      "computedHash": "ff4d9bc724f0e56a51c453eef5b93caef1c16d3623ac49345d74fc1a5efbc05a"
     },
     "tailwind-design-system": {
       "source": "wshobson/agents",
