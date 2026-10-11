@@ -13,7 +13,7 @@ import {
   Tag,
 } from "antd";
 import type { TableProps } from "antd";
-import { useEffect, useState, type Key } from "react";
+import { useEffect, useRef, useState, type Key } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
   cancelOrders,
@@ -29,7 +29,10 @@ import {
   type OrderTab,
 } from "@/features/order";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 20, 50];
+const DEFAULT_PAGE_SIZE = 10;
+/** 表头 + 分页占用的固定高度（antd 默认值），用于推算表格内部滚动高度。 */
+const TABLE_CHROME_HEIGHT = 120;
 
 const TAB_ITEMS: { key: OrderTab; label: string }[] = [
   { key: "all", label: "全部" },
@@ -53,6 +56,8 @@ export function OrderListPage() {
   const tabParam = searchParams.get("tab");
   const tab = (TAB_ITEMS.some((item) => item.key === tabParam) ? tabParam : "all") as OrderTab;
   const page = Number(searchParams.get("page") ?? "1") || 1;
+  const pageSizeParam = Number(searchParams.get("pageSize") ?? "");
+  const pageSize = PAGE_SIZE_OPTIONS.includes(pageSizeParam) ? pageSizeParam : DEFAULT_PAGE_SIZE;
   const orderNo = searchParams.get("orderNo") ?? "";
   const memberName = searchParams.get("memberName") ?? "";
 
@@ -68,8 +73,12 @@ export function OrderListPage() {
   const [selectedRows, setSelectedRows] = useState<Order[]>([]);
   const [renewTargets, setRenewTargets] = useState<string[] | null>(null);
 
+  // 表格内部滚动高度：随可用区域自适应（由 ResizeObserver 异步回填，避免在 effect 内同步 setState）。
+  const [scrollY, setScrollY] = useState<number>();
+  const tableAreaRef = useRef<HTMLDivElement | null>(null);
+
   // 查询条件指纹：命中即视为「已加载」，避免切条件瞬间展示旧数据。
-  const queryKey = `${tab}|${page}|${orderNo}|${memberName}|${reloadToken}`;
+  const queryKey = `${tab}|${page}|${pageSize}|${orderNo}|${memberName}|${reloadToken}`;
 
   // 搜索框回显当前 URL 条件（翻页/后退也能同步）。
   useEffect(() => {
@@ -80,7 +89,7 @@ export function OrderListPage() {
     let alive = true;
     getOrders({
       page,
-      pageSize: PAGE_SIZE,
+      pageSize,
       tab,
       orderNo,
       memberName,
@@ -106,7 +115,21 @@ export function OrderListPage() {
       alive = false;
     };
     // queryKey 已包含全部查询条件。
-  }, [tab, page, orderNo, memberName, reloadToken, queryKey]);
+  }, [tab, page, pageSize, orderNo, memberName, reloadToken, queryKey]);
+
+  // 表格区域尺寸变化时，重算表体内部滚动高度，使表格「撑满且不溢出」内容区。
+  useEffect(() => {
+    const el = tableAreaRef.current;
+    if (el === null) {
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const height = entries[0]?.contentRect.height ?? 0;
+      setScrollY(Math.max(Math.floor(height) - TABLE_CHROME_HEIGHT, 120));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // 仅采用与当前查询匹配的结果，切条件瞬间展示 loading 而非旧数据。
   const settled = result?.key === queryKey ? result : null;
@@ -228,9 +251,17 @@ export function OrderListPage() {
     },
   ];
 
+  // 批量按钮只出现在对应 Tab：续卡对「已到期」有效，撤单对「进行中」有效；「全部」两者都可操作。
+  const canRenew = tab === "all" || tab === "expired";
+  const canCancel = tab === "all" || tab === "inProgress";
+
   return (
     <Card
       title="订单列表"
+      className="flex h-full flex-col"
+      styles={{
+        body: { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" },
+      }}
       extra={
         <Link to="/orders/new">
           <Button type="primary" icon={<PlusOutlined />}>
@@ -240,58 +271,78 @@ export function OrderListPage() {
       }
     >
       <Tabs
+        className="shrink-0"
         activeKey={tab}
         items={TAB_ITEMS}
         onChange={(key) => updateQuery({ tab: key, page: "1" })}
       />
 
-      <Form form={form} layout="inline" className="mb-4" onFinish={onSearch}>
-        <Form.Item name="orderNo" label="订单号">
-          <Input allowClear placeholder="精确匹配" />
-        </Form.Item>
-        <Form.Item name="memberName" label="会员姓名">
-          <Input allowClear placeholder="模糊匹配" />
-        </Form.Item>
-        <Form.Item>
-          <Space>
-            <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-              查询
-            </Button>
-            <Button icon={<ReloadOutlined />} onClick={onReset}>
-              重置
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
+      <div className="mb-6 shrink-0">
+        <Form form={form} layout="inline" onFinish={onSearch}>
+          <Form.Item name="orderNo" label="订单号">
+            <Input allowClear placeholder="精确匹配" />
+          </Form.Item>
+          <Form.Item name="memberName" label="会员姓名">
+            <Input allowClear placeholder="模糊匹配" />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
+                查询
+              </Button>
+              <Button icon={<ReloadOutlined />} onClick={onReset}>
+                重置
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </div>
 
-      <Space className="mb-4">
-        <Button onClick={onBatchRenew}>批量续卡</Button>
-        <Button danger onClick={onBatchCancel}>
-          一键撤单
-        </Button>
-      </Space>
+      {(canRenew || canCancel) && (
+        <Space className="mb-3 shrink-0">
+          {canRenew && <Button onClick={onBatchRenew}>批量续卡</Button>}
+          {canCancel && (
+            <Button danger onClick={onBatchCancel}>
+              一键撤单
+            </Button>
+          )}
+        </Space>
+      )}
 
       {error === null ? (
-        <Spin spinning={loading}>
-          <Table<Order>
-            rowKey="orderNo"
-            rowSelection={{
-              selectedRowKeys: selectedKeys,
-              onChange: (keys, rows) => {
-                setSelectedKeys(keys);
-                setSelectedRows(rows);
-              },
-            }}
-            columns={columns}
-            dataSource={data}
-            pagination={{
-              current: page,
-              pageSize: PAGE_SIZE,
-              total,
-              onChange: (nextPage) => updateQuery({ page: String(nextPage) }),
-            }}
-          />
-        </Spin>
+        <div ref={tableAreaRef} className="min-h-0 flex-1">
+          <Spin spinning={loading}>
+            <Table<Order>
+              rowKey="orderNo"
+              rowSelection={{
+                selectedRowKeys: selectedKeys,
+                onChange: (keys, rows) => {
+                  setSelectedKeys(keys);
+                  setSelectedRows(rows);
+                },
+              }}
+              columns={columns}
+              dataSource={data}
+              scroll={{ y: scrollY }}
+              pagination={{
+                current: page,
+                pageSize,
+                total,
+                showSizeChanger: true,
+                pageSizeOptions: PAGE_SIZE_OPTIONS,
+                showQuickJumper: true,
+                showTotal: (count) => `共 ${count} 条`,
+                onChange: (nextPage, nextPageSize) => {
+                  if (nextPageSize !== pageSize) {
+                    updateQuery({ pageSize: String(nextPageSize), page: "1" });
+                  } else {
+                    updateQuery({ page: String(nextPage) });
+                  }
+                },
+              }}
+            />
+          </Spin>
+        </div>
       ) : (
         <Alert type="error" message={error} showIcon />
       )}

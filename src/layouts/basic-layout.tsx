@@ -63,9 +63,11 @@ export function BasicLayout() {
             </Space>
           </Dropdown>
         </Header>
-        <Content className="overflow-auto p-6">
-          <Breadcrumb className="mb-4" items={breadcrumbItems} />
-          <Outlet />
+        <Content className="flex flex-col gap-4 overflow-hidden p-6">
+          <Breadcrumb className="shrink-0" items={breadcrumbItems} />
+          <div className="min-h-0 flex-1 overflow-auto">
+            <Outlet />
+          </div>
         </Content>
       </Layout>
     </Layout>
