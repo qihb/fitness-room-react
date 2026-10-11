@@ -21,11 +21,13 @@
 > **本项目为多人协作，要求技能与 MCP 全员一致**，故**所有必需技能一律项目级固化**（进 `.trae/skills/` + `skills-lock.json`），不依赖任何全局配置。
 > **正确判据：团队能否随仓库稳定复现**（而非「我本机是否已可用」）。
 
-- [ ] 1.1 `vercel-labs/agent-skills@vercel-react-best-practices` — React/Next.js 性能规范（本项目无 Next.js，仅取 React 部分）。**项目级固化**：本机 plugin 版 `react-best-practices` 属用户级、不进仓库，不可依赖。
-- [ ] 1.2 `wshobson/agents@tailwind-design-system` — Tailwind v4 写法：仅取 CSS-first `@theme`/`@utility`/`@custom-variant`、v3→v4 迁移清单、响应式布局；忽略 shadcn/CVA 章节（与「antd 管交互」冲突）。
-- [ ] 1.3 `wshobson/agents@typescript-advanced-types` — TS 类型规范（高级类型 / 类型安全 / 内置工具类型 / 常见陷阱）。
-- [ ] 1.4 `mattpocock/skills@tdd` — TDD 流程（1.1M 安装 / 283K★；先确认接口与行为再编码，与 `plan-driven-development` 理念一致）。**项目级固化**：本机全局已装的同名技能不进仓库，不可依赖。
-- [ ] 1.5 `ibelick/ui-skills@baseline-ui` + `@fixing-accessibility` + `vercel-labs/agent-skills@web-design-guidelines` — UI 打磨（Tailwind 定向）/ 无障碍修复 / 设计与 a11y 广度审查。三者职责不同，**均项目级保留**（原「合并为 1 个」的收敛已作废）。
+> **完成（2026-10-11）**：1.1–1.5 共 7 个技能已由用户**手动下载**落盘至 `.trae/skills/`，并生成 `skills-lock.json`（记录 7 个技能的来源仓库与 `computedHash`）。
+
+- [x] 1.1 `vercel-labs/agent-skills@vercel-react-best-practices` — React/Next.js 性能规范（本项目无 Next.js，仅取 React 部分）。**项目级固化**：本机 plugin 版 `react-best-practices` 属用户级、不进仓库，不可依赖。
+- [x] 1.2 `wshobson/agents@tailwind-design-system` — Tailwind v4 写法：仅取 CSS-first `@theme`/`@utility`/`@custom-variant`、v3→v4 迁移清单、响应式布局；忽略 shadcn/CVA 章节（与「antd 管交互」冲突）。
+- [x] 1.3 `wshobson/agents@typescript-advanced-types` — TS 类型规范（高级类型 / 类型安全 / 内置工具类型 / 常见陷阱）。
+- [x] 1.4 `mattpocock/skills@tdd` — TDD 流程（1.1M 安装 / 283K★；先确认接口与行为再编码，与 `plan-driven-development` 理念一致）。**项目级固化**：本机全局已装的同名技能不进仓库，不可依赖。
+- [x] 1.5 `ibelick/ui-skills@baseline-ui` + `@fixing-accessibility` + `vercel-labs/agent-skills@web-design-guidelines` — UI 打磨（Tailwind 定向）/ 无障碍修复 / 设计与 a11y 广度审查。三者职责不同，**均项目级保留**（原「合并为 1 个」的收敛已作废）。
 
 ## 阶段 2 · 栈绑定技能接入（项目级 `.trae/skills/`）
 
@@ -127,7 +129,9 @@ npx skills experimental_install
 
 ## 当前状态
 
-- 阶段 0 已确认完成；清单**修订为「全部项目级固化」**（原"收敛删除"方案作废）；**阶段 1–3 待用户指定步骤后执行**。
+- 阶段 0 已确认完成；清单**修订为「全部项目级固化」**（原"收敛删除"方案作废）。
+- **阶段 1 已完成（2026-10-11）**：1.1–1.5 共 7 个技能已手动下载至 `.trae/skills/`，`skills-lock.json` 已生成。已落盘目录：`vercel-react-best-practices`、`tailwind-design-system`、`typescript-advanced-types`、`tdd`、`baseline-ui`、`fixing-accessibility`、`web-design-guidelines`。
+- **阶段 2–3 待用户指定步骤后执行**。
 
 ## 待确认决策（均已确认）
 
@@ -145,4 +149,5 @@ npx skills experimental_install
 
 ## 下一步
 
-- 清单已锁定为「全部项目级固化」，**待用户指定要执行哪几步**（如「执行 1.1–1.5」或「先做 2.1」）；并请确认 Trae 的项目级 MCP 机制。
+- 阶段 1 已完成并随本次提交入库（技能目录 + `skills-lock.json`）。
+- **待用户指定后续步骤**（如「执行 2.1 2.2 2.3」或「做阶段 3」）；并请确认 Trae 的项目级 MCP 机制。

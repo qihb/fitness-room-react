@@ -9,6 +9,14 @@
     "preview": "vp preview",
     "prepare": "vp config"
   },
+  "dependencies": {
+    "antd": "catalog:",
+    "axios": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-router": "catalog:",
+    "zustand": "catalog:"
+  },
   "devDependencies": {
     "typescript": "~6.0.2",
     "vite": "catalog:",
