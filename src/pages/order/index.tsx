@@ -1,50 +1,101 @@
-import { PlusOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Spin, Table, Tag } from "antd";
+import { PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import {
+  Alert,
+  App as AntdApp,
+  Button,
+  Card,
+  Form,
+  Input,
+  Space,
+  Spin,
+  Table,
+  Tabs,
+  Tag,
+} from "antd";
 import type { TableProps } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type Key } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
+  cancelOrders,
   formatAmount,
   formatOrderStatus,
   getOrders,
+  isCancellable,
+  isRenewable,
+  ORDER_STATUS_COLOR,
+  RenewOrderModal,
   type Order,
   type OrderStatus,
+  type OrderTab,
 } from "@/features/order";
 
 const PAGE_SIZE = 10;
 
-const STATUS_COLOR: Record<OrderStatus, string> = {
-  pending: "gold",
-  paid: "green",
-  cancelled: "red",
-};
+const TAB_ITEMS: { key: OrderTab; label: string }[] = [
+  { key: "all", label: "全部" },
+  { key: "inProgress", label: "进行中" },
+  { key: "expired", label: "已到期" },
+  { key: "completed", label: "已完成" },
+  { key: "cancelled", label: "已取消" },
+];
 
-interface PageState {
-  page: number;
-  data: Order[];
-  total: number;
-  error: string | null;
+interface SearchValues {
+  orderNo?: string;
+  memberName?: string;
 }
 
-/** 订单列表页：经 feature 数据层取数，分页状态放 URL search params。 */
+/** 订单列表页：状态 Tab + 订单号/姓名搜索 + 批量续卡/一键撤单；筛选状态放 URL search params。 */
 export function OrderListPage() {
+  const { message, modal } = AntdApp.useApp();
   const [searchParams, setSearchParams] = useSearchParams();
-  const page = Number(searchParams.get("page") ?? "1") || 1;
+  const [form] = Form.useForm<SearchValues>();
 
-  const [result, setResult] = useState<PageState | null>(null);
+  const tabParam = searchParams.get("tab");
+  const tab = (TAB_ITEMS.some((item) => item.key === tabParam) ? tabParam : "all") as OrderTab;
+  const page = Number(searchParams.get("page") ?? "1") || 1;
+  const orderNo = searchParams.get("orderNo") ?? "";
+  const memberName = searchParams.get("memberName") ?? "";
+
+  const [result, setResult] = useState<{
+    key: string;
+    data: Order[];
+    total: number;
+    error: string | null;
+  } | null>(null);
+
+  const [reloadToken, setReloadToken] = useState(0);
+  const [selectedKeys, setSelectedKeys] = useState<Key[]>([]);
+  const [selectedRows, setSelectedRows] = useState<Order[]>([]);
+  const [renewTargets, setRenewTargets] = useState<string[] | null>(null);
+
+  // 查询条件指纹：命中即视为「已加载」，避免切条件瞬间展示旧数据。
+  const queryKey = `${tab}|${page}|${orderNo}|${memberName}|${reloadToken}`;
+
+  // 搜索框回显当前 URL 条件（翻页/后退也能同步）。
+  useEffect(() => {
+    form.setFieldsValue({ orderNo, memberName });
+  }, [form, orderNo, memberName]);
 
   useEffect(() => {
     let alive = true;
-    getOrders({ page, pageSize: PAGE_SIZE })
+    getOrders({
+      page,
+      pageSize: PAGE_SIZE,
+      tab,
+      orderNo,
+      memberName,
+      sort: "createdAt",
+      order: "desc",
+    })
       .then((pageResult) => {
         if (alive) {
-          setResult({ page, data: pageResult.list, total: pageResult.total, error: null });
+          setResult({ key: queryKey, data: pageResult.list, total: pageResult.total, error: null });
         }
       })
       .catch((cause: unknown) => {
         if (alive) {
           setResult({
-            page,
+            key: queryKey,
             data: [],
             total: 0,
             error: cause instanceof Error ? cause.message : "加载失败",
@@ -54,28 +105,127 @@ export function OrderListPage() {
     return () => {
       alive = false;
     };
-  }, [page]);
+    // queryKey 已包含全部查询条件。
+  }, [tab, page, orderNo, memberName, reloadToken, queryKey]);
 
-  // 仅采用与当前 page 匹配的结果，避免翻页瞬间串数据。
-  const settled = result?.page === page ? result : null;
+  // 仅采用与当前查询匹配的结果，切条件瞬间展示 loading 而非旧数据。
+  const settled = result?.key === queryKey ? result : null;
   const loading = settled === null;
-  const error = settled?.error ?? null;
   const data = settled?.data ?? [];
   const total = settled?.total ?? 0;
+  const error = settled?.error ?? null;
+
+  const clearSelection = () => {
+    setSelectedKeys([]);
+    setSelectedRows([]);
+  };
+
+  const updateQuery = (next: Record<string, string | null>) => {
+    // 条件变化时清空已选，避免跨条件误操作。
+    clearSelection();
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      Object.entries(next).forEach(([key, value]) => {
+        if (value === null || value === "") {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      });
+      return params;
+    });
+  };
+
+  const reload = () => {
+    setReloadToken((token) => token + 1);
+  };
+
+  const onSearch = (values: SearchValues) => {
+    updateQuery({ orderNo: values.orderNo ?? "", memberName: values.memberName ?? "", page: "1" });
+  };
+
+  const onReset = () => {
+    form.resetFields();
+    updateQuery({ orderNo: null, memberName: null, page: "1" });
+  };
+
+  const onBatchRenew = () => {
+    if (selectedRows.length === 0) {
+      message.warning("请先选择订单");
+      return;
+    }
+    const invalid = selectedRows.filter((order) => !isRenewable(order.status));
+    if (invalid.length > 0) {
+      modal.warning({
+        title: "部分订单不满足续卡条件",
+        content: `仅「已到期」订单可续卡，以下订单不满足：${invalid.map((order) => order.orderNo).join("、")}`,
+      });
+      return;
+    }
+    setRenewTargets(selectedRows.map((order) => order.orderNo));
+  };
+
+  const onBatchCancel = () => {
+    if (selectedRows.length === 0) {
+      message.warning("请先选择订单");
+      return;
+    }
+    const invalid = selectedRows.filter((order) => !isCancellable(order.status));
+    if (invalid.length > 0) {
+      modal.warning({
+        title: "部分订单不满足撤单条件",
+        content: `仅「待制卡」「待寄卡」订单可撤单，以下订单不满足：${invalid.map((order) => order.orderNo).join("、")}`,
+      });
+      return;
+    }
+    const orderNos = selectedRows.map((order) => order.orderNo);
+    modal.confirm({
+      title: "确认撤单",
+      content: `将撤销以下订单：${orderNos.join("、")}`,
+      okText: "确认撤单",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await cancelOrders({ orderNos });
+          message.success("撤单成功");
+          clearSelection();
+          reload();
+        } catch (cause) {
+          message.error(cause instanceof Error ? cause.message : "撤单失败");
+        }
+      },
+    });
+  };
 
   const columns: TableProps<Order>["columns"] = [
-    { title: "订单号", dataIndex: "id" },
-    { title: "客户", dataIndex: "customer" },
-    { title: "商品", dataIndex: "product" },
-    { title: "金额", dataIndex: "amount", render: (amount: number) => formatAmount(amount) },
+    { title: "订单号", dataIndex: "orderNo" },
+    { title: "会员姓名", dataIndex: "memberName" },
+    { title: "购卡年限", dataIndex: "years", render: (years: number) => `${years} 年` },
+    {
+      title: "订单金额",
+      dataIndex: "amount",
+      render: (amount: number | null) => formatAmount(amount),
+    },
     {
       title: "状态",
       dataIndex: "status",
       render: (status: OrderStatus) => (
-        <Tag color={STATUS_COLOR[status]}>{formatOrderStatus(status)}</Tag>
+        <Tag color={ORDER_STATUS_COLOR[status]}>{formatOrderStatus(status)}</Tag>
       ),
     },
     { title: "创建时间", dataIndex: "createdAt" },
+    {
+      title: "操作",
+      key: "action",
+      render: (_, record) =>
+        isRenewable(record.status) ? (
+          <Button type="link" size="small" onClick={() => setRenewTargets([record.orderNo])}>
+            续卡
+          </Button>
+        ) : (
+          "-"
+        ),
+    },
   ];
 
   return (
@@ -89,29 +239,73 @@ export function OrderListPage() {
         </Link>
       }
     >
+      <Tabs
+        activeKey={tab}
+        items={TAB_ITEMS}
+        onChange={(key) => updateQuery({ tab: key, page: "1" })}
+      />
+
+      <Form form={form} layout="inline" className="mb-4" onFinish={onSearch}>
+        <Form.Item name="orderNo" label="订单号">
+          <Input allowClear placeholder="精确匹配" />
+        </Form.Item>
+        <Form.Item name="memberName" label="会员姓名">
+          <Input allowClear placeholder="模糊匹配" />
+        </Form.Item>
+        <Form.Item>
+          <Space>
+            <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
+              查询
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={onReset}>
+              重置
+            </Button>
+          </Space>
+        </Form.Item>
+      </Form>
+
+      <Space className="mb-4">
+        <Button onClick={onBatchRenew}>批量续卡</Button>
+        <Button danger onClick={onBatchCancel}>
+          一键撤单
+        </Button>
+      </Space>
+
       {error === null ? (
         <Spin spinning={loading}>
           <Table<Order>
-            rowKey="id"
+            rowKey="orderNo"
+            rowSelection={{
+              selectedRowKeys: selectedKeys,
+              onChange: (keys, rows) => {
+                setSelectedKeys(keys);
+                setSelectedRows(rows);
+              },
+            }}
             columns={columns}
             dataSource={data}
             pagination={{
               current: page,
               pageSize: PAGE_SIZE,
               total,
-              onChange: (nextPage) => {
-                setSearchParams((prev) => {
-                  const next = new URLSearchParams(prev);
-                  next.set("page", String(nextPage));
-                  return next;
-                });
-              },
+              onChange: (nextPage) => updateQuery({ page: String(nextPage) }),
             }}
           />
         </Spin>
       ) : (
         <Alert type="error" message={error} showIcon />
       )}
+
+      <RenewOrderModal
+        open={renewTargets !== null}
+        orderNos={renewTargets ?? []}
+        onCancel={() => setRenewTargets(null)}
+        onSuccess={() => {
+          setRenewTargets(null);
+          clearSelection();
+          reload();
+        }}
+      />
     </Card>
   );
 }
