@@ -19,6 +19,8 @@ export default defineConfig({
     baseURL: "http://localhost:5173",
     trace: "retain-on-failure",
   },
+  // CI 冷启动 dev server 较慢（依赖优化 + 2 核机器），放宽单用例超时。
+  timeout: 90_000,
   projects: [
     { name: "setup", testMatch: /auth\.setup\.ts/ },
     {
@@ -32,5 +34,8 @@ export default defineConfig({
     url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // 透出 dev server 日志（依赖优化/报错），CI 白屏时能从 Actions 日志直接定位。
+    stdout: "pipe",
+    stderr: "pipe",
   },
 });
