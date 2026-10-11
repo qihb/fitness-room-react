@@ -1,4 +1,5 @@
 import {
+  DownOutlined,
   FireOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -7,7 +8,7 @@ import {
   UnorderedListOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Avatar, Breadcrumb, Button, Dropdown, Layout, Menu, Space } from "antd";
+import { Avatar, Breadcrumb, Button, ConfigProvider, Dropdown, Layout, Menu, Space } from "antd";
 import { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { useAuthStore } from "@/store/auth";
@@ -55,7 +56,7 @@ export function BasicLayout() {
         />
       </Sider>
       <Layout>
-        <Header className="flex items-center justify-between px-6">
+        <Header className="flex items-center justify-between">
           <Button
             type="text"
             aria-label={collapsed ? "展开菜单" : "收起菜单"}
@@ -81,11 +82,20 @@ export function BasicLayout() {
             <Space className="cursor-pointer">
               <Avatar size="small" icon={<UserOutlined />} />
               {user?.name}
+              <DownOutlined className="text-xs" />
             </Space>
           </Dropdown>
         </Header>
-        <Content className="flex flex-col gap-4 overflow-hidden p-6">
-          {isOrderRoute && <Breadcrumb className="shrink-0" items={breadcrumbItems} />}
+        {/* 面包屑条：紧贴顶栏、高 32px，背景与内容区一致（透出布局灰底）；
+            Breadcrumb 无字号 token，用局部 ConfigProvider 把子树字号降为 12。 */}
+        {isOrderRoute && (
+          <div className="flex h-8 shrink-0 items-center px-6">
+            <ConfigProvider theme={{ token: { fontSize: 12 } }}>
+              <Breadcrumb items={breadcrumbItems} />
+            </ConfigProvider>
+          </div>
+        )}
+        <Content className="flex flex-col overflow-hidden px-6 pb-6 pt-3">
           <div className="min-h-0 flex-1 overflow-auto">
             <Outlet />
           </div>

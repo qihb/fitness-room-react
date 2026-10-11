@@ -1,4 +1,5 @@
 import type { OrderStatus, OrderTab } from "./types/order";
+import { PERMISSION } from "@/lib/permissions";
 
 /** 单价：元 / 年。 */
 export const PRICE_PER_YEAR = 1200;
@@ -31,6 +32,18 @@ export const ORDER_STATUS_COLOR: Record<OrderStatus, string> = {
   expired: "orange",
   completed: "green",
   cancelled: "red",
+};
+
+/**
+ * Tab → 导出权限点：导出能力按「状态维度」逐项授权，由业务方在权限配置中开通；
+ * 名单不写死在前端，前端仅按当前 Tab 判断是否显示导出入口。
+ */
+export const ORDER_EXPORT_PERMISSION_BY_TAB: Record<OrderTab, string> = {
+  all: PERMISSION.ORDER_EXPORT_ALL,
+  inProgress: PERMISSION.ORDER_EXPORT_IN_PROGRESS,
+  expired: PERMISSION.ORDER_EXPORT_EXPIRED,
+  completed: PERMISSION.ORDER_EXPORT_COMPLETED,
+  cancelled: PERMISSION.ORDER_EXPORT_CANCELLED,
 };
 
 /** Tab → 覆盖的订单状态集合；`all` 为 null 表示不过滤。 */

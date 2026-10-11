@@ -134,8 +134,21 @@ function calcAmount(years: number): number {
   return years >= DISCOUNT_THRESHOLD_YEARS ? Math.round(base * DISCOUNT_RATE) : base;
 }
 
-/** 种子数据：6 种状态全覆盖，含 0 / null 金额与重名会员。 */
-const seedOrders: MockOrder[] = SEED_SPECS.map((spec, index) => {
+/**
+ * Fisher–Yates 洗牌：种子规格随机分布，避免各状态在列表中聚堆（每次刷新分布不同）。
+ * 仅在模块初始化时执行一次，会话内数据不变，分页/排序仍稳定。
+ */
+function shuffle<T>(list: readonly T[]): T[] {
+  const result = [...list];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/** 种子数据：6 种状态全覆盖（洗牌随机分布），含 0 / null 金额与重名会员。 */
+const seedOrders: MockOrder[] = shuffle(SEED_SPECS).map((spec, index) => {
   const date = dayjs(SEED_BASE_DATE).subtract(index, "day");
   return {
     orderNo: `${date.format("YYYYMMDD")}${String(index + 1).padStart(3, "0")}`,
@@ -204,19 +217,15 @@ function readAuthorization(config: InternalAxiosRequestConfig): string | undefin
   return typeof value === "string" ? value : undefined;
 }
 
-/** GET /orders：Tab 筛选 + 订单号精确 + 姓名模糊 + 创建时间倒序 + 分页。 */
-function listOrders(config: InternalAxiosRequestConfig): AxiosResponse {
-  const params = (config.params ?? {}) as {
-    page?: number;
-    pageSize?: number;
-    tab?: string;
-    orderNo?: string;
-    memberName?: string;
-    order?: string;
-  };
-  const page = Number(params.page ?? 1) || 1;
-  const pageSize = Number(params.pageSize ?? 10) || 10;
+/** 单次导出条数上限：接口层兜底，超过直接拒绝（订单百万级，前端不支持全量导出）。 */
+const EXPORT_MAX_ROWS = 500;
 
+/** 列表 / 导出共用的过滤：Tab 状态 + 订单号精确 + 姓名模糊。 */
+function filterOrders(params: {
+  tab?: string;
+  orderNo?: string;
+  memberName?: string;
+}): MockOrder[] {
   let list = [...orders];
 
   const statuses = params.tab ? TAB_STATUS[params.tab] : undefined;
@@ -230,6 +239,51 @@ function listOrders(config: InternalAxiosRequestConfig): AxiosResponse {
   if (keyword) {
     list = list.filter((order) => order.memberName.includes(keyword));
   }
+  return list;
+}
+
+/**
+ * GET /orders/export：有勾选按勾选，否则按 Tab + 搜索条件返回**全量**匹配数据。
+ * 超过 `EXPORT_MAX_ROWS` 时按 400 拒绝，模拟接口层的数据量兜底。
+ */
+function exportOrders(config: InternalAxiosRequestConfig): AxiosResponse {
+  const params = (config.params ?? {}) as {
+    orderNos?: string[];
+    tab?: string;
+    orderNo?: string;
+    memberName?: string;
+  };
+
+  const picked = Array.isArray(params.orderNos) ? params.orderNos : [];
+  const list =
+    picked.length > 0
+      ? orders.filter((order) => picked.includes(order.orderNo))
+      : filterOrders(params);
+
+  if (list.length > EXPORT_MAX_ROWS) {
+    return fail(
+      config,
+      `导出数据量过大（${list.length} 条，单次上限 ${EXPORT_MAX_ROWS} 条），请缩小查询范围`,
+    );
+  }
+
+  return respond(config, { code: 0, message: "ok", data: list });
+}
+
+/** GET /orders：Tab 筛选 + 订单号精确 + 姓名模糊 + 创建时间倒序 + 分页。 */
+function listOrders(config: InternalAxiosRequestConfig): AxiosResponse {
+  const params = (config.params ?? {}) as {
+    page?: number;
+    pageSize?: number;
+    tab?: string;
+    orderNo?: string;
+    memberName?: string;
+    order?: string;
+  };
+  const page = Number(params.page ?? 1) || 1;
+  const pageSize = Number(params.pageSize ?? 10) || 10;
+
+  const list = filterOrders(params);
 
   // 默认创建时间倒序，保证最新创建的订单显示在最前面。
   const desc = params.order !== "asc";
@@ -319,10 +373,11 @@ export const mockAdapter: AxiosAdapter = async (config) => {
   const url = config.url;
 
   const isOrders = url === "/orders";
+  const isExport = url === "/orders/export" && method === "get";
   const isRenew = url === "/orders/renew" && method === "post";
   const isCancel = url === "/orders/cancel" && method === "post";
 
-  if (isOrders || isRenew || isCancel) {
+  if (isOrders || isExport || isRenew || isCancel) {
     await delay(300);
 
     // 401 模拟：无 token 或非法 token（`Bearer invalid`）时拒绝，便于验证登录态失效流程。
@@ -336,6 +391,9 @@ export const mockAdapter: AxiosAdapter = async (config) => {
     }
     if (isOrders && method === "post") {
       return createOrder(config);
+    }
+    if (isExport) {
+      return exportOrders(config);
     }
     if (isRenew) {
       return renewOrders(config);

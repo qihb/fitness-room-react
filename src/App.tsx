@@ -20,6 +20,8 @@ export default function App() {
         components: {
           Layout: {
             headerBg: "#ffffff",
+            // 顶栏水平内边距与内容区 p-6（24px）对齐；antd 默认 50px 会压过 Tailwind 的 px-6。
+            headerPadding: "0 24px",
           },
         },
       }}
