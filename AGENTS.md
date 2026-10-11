@@ -26,11 +26,24 @@
 
 ## 目录约定
 
+- `src/features/<feature>/`：**按业务领域分层**（`api/`、`components/`、`hooks/`、`stores/`、`types/`、`utils/`），并以 `index.ts` 作为唯一对外出口。
 - `src/router/`：路由集中定义，使用 react-router 数据路由 `createBrowserRouter`。
 - `src/pages/`：页面；`src/layouts/`：布局；`src/components/`：通用组件。
 - `src/api/request.ts`：唯一的 axios 实例与拦截器，禁止在组件内直接 `new axios`。
 - `src/store/`：按业务领域拆分的 zustand store。
 - 组件统一为函数组件，文件扩展名使用 `.tsx`。
+
+## 架构规范
+
+代码**按功能（feature）而非文件类型组织**，详见项目技能 `.trae/skills/react-app-architecture/`。
+
+- **feature 边界**：外部只能经 `@/features/<feature>`（即其 `index.ts`）导入，**禁止**深层导入 `features/<feature>/components|api/...`。
+- **单向依赖**：`pages` → `features` → `components/hooks/lib`；feature 不反向依赖 `pages`，feature 间不深层互引。
+- **API 层**：请求一律走 `src/api/request.ts` 的唯一实例；每个 feature 在 `features/<feature>/api/` 声明自己的请求与 hooks。
+- **状态分区**：组件状态用 `useState`；表单用 antd `Form`；跨组件共享用 zustand；**可分享/可后退**的状态（分页、筛选、排序）放 URL search params。本项目用 zustand 承接服务端缓存，**不使用 react-query**。
+- **错误处理**：预期错误就地用 antd `message`/`Alert` 处理；非预期错误用 `createBrowserRouter` 的 `errorElement` 按路由层级多层兜底。
+- **权限**：以前端只做体验、后端鉴权为准；采用基于权限点（PBAC）的集中判断。
+- **命名**：文件/目录 kebab-case；`@/*` 指代 `src/*`。
 
 ## 编码规范
 

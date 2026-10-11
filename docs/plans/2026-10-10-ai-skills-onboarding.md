@@ -55,12 +55,16 @@
 - **启用前提**：Trae `设置 > MCP` → 打开「启用项目级 MCP」；`.trae/mcp.json` 受 IDE 写保护，需用户侧创建。
 - **参考**：https://docs.trae.cn/ide/add-mcp-servers （「项目级 MCP Server」小节）。
 
-## 阶段 3 · bulletproof-react 规范接入
+## 阶段 3 · bulletproof-react 规范接入 ✅
+
+> **完成（2026-10-11）**：bulletproof-react 12 篇 docs 已调研裁剪，落成自建项目技能 `react-app-architecture`，并与 `AGENTS.md` 联动。
 
 - ⚠️ **非技能包**：来源为 GitHub 仓库 `alan2207/bulletproof-react`（其 `docs/`），无对应 `skills` 包，需自行裁剪落地。
-- [ ] 3.1 阅读其 docs：Project Structure / API Layer / State Management / Error Handling / Security / Project Standards
-- [ ] 3.2 裁剪为本项目版（去 react-query / Next.js，对齐 axios + zustand + antd + Tailwind）
-- [ ] 3.3 落成 **项目技能** `react-app-architecture`（✅ 已定：形态 A），并与 `AGENTS.md` 联动
+- [x] 3.1 阅读其 docs：Project Structure / API Layer / State Management / Error Handling / Security / Project Standards
+- [x] 3.2 裁剪为本项目版（去 react-query / Next.js，对齐 axios + zustand + antd + Tailwind）
+- [x] 3.3 落成 **项目技能** `react-app-architecture`（形态 A），并与 `AGENTS.md` 联动
+  - 新增 `.trae/skills/react-app-architecture/SKILL.md`（**自建技能，不入 `skills-lock.json`**）
+  - `AGENTS.md`：`目录约定` 增补 `src/features/<feature>/`；新增 `架构规范` 节
 
 ---
 
@@ -107,12 +111,14 @@ npx skills experimental_install
 
 **风险提示**：`vercel-labs/agent-skills` 仓库 **无 License**（GitHub API `license: null`），商用前需自行确认授权。
 
-## 阶段 4 · 验证与沉淀
+## 阶段 4 · 验证与沉淀 ✅
 
-- [ ] 4.1 逐个验证技能可被识别 / 按需触发
-- [ ] 4.2 用一个真实小需求验证「AI 按规范产出」
-- [ ] 4.3 更新 `AGENTS.md` / README，勾选本计划
-- [ ] 4.4 提交 `skills-lock.json` + 在 README 写明团队恢复命令（`npx skills experimental_install`）
+- [x] 4.1 逐个验证技能可被识别 / 按需触发 —— 结构校验通过（`react-app-architecture` 目录 + 合法 frontmatter `name`/`description` 已落盘；实际触发需 IDE 重载会话生效）。
+- [x] 4.2 用一个真实小需求验证「AI 按规范产出」—— 按确认采用**架构骨架示例**：新增 `src/api/request.ts`（唯一 axios 实例）+ `src/features/member/`（`types` / `api` / `index.ts` 公共出口）+ `src/pages/member/list-members.ts`（经 feature 公共 API 消费）；`pnpm exec vp check` 通过（20 文件格式、8 文件 lint/type 无错）。
+- [x] 4.3 更新 `AGENTS.md` / README，勾选本计划
+- [x] 4.4 提交 `skills-lock.json` + 在 README 写明团队恢复命令（`npx skills experimental_install`）；见 README「AI 技能与 MCP（项目级）」。
+
+> **附带修复（4.2 发现）**：`.trae/mcp.json` 受 IDE 写保护、且 `.trae/skills/**` 为外部内容，导致 `vp check` 全仓无法通过。已在 `vite.config.ts` 的 `fmt.ignorePatterns` 排除 `.trae/**`，`vp check` 恢复绿灯。
 
 ---
 
@@ -141,7 +147,8 @@ npx skills experimental_install
 - 阶段 0 已确认完成；清单**修订为「全部项目级固化」**（原"收敛删除"方案作废）。
 - **阶段 1 已完成（2026-10-11）**：1.1–1.5 共 7 个技能已手动下载至 `.trae/skills/`，`skills-lock.json` 已生成。已落盘目录：`vercel-react-best-practices`、`tailwind-design-system`、`typescript-advanced-types`、`tdd`、`baseline-ui`、`fixing-accessibility`、`web-design-guidelines`。
 - **阶段 2 已完成（2026-10-11）**：`antd` / `react-router` / `find-skills` 三个技能已落盘 `.trae/skills/`，`skills-lock.json` 已更新（共 10 个技能）；antd MCP 已落库 `.trae/mcp.json`（需在 Trae 设置中开启「启用项目级 MCP」）。
-- **阶段 3 待用户指定步骤后执行**。
+- **阶段 3 已完成（2026-10-11）**：自建技能 `react-app-architecture` 已落盘 `.trae/skills/`（不入 `skills-lock.json`）；`AGENTS.md` 已增补 `features` 目录约定与「架构规范」节。
+- **阶段 4 已完成（2026-10-11）**：技能结构校验通过；架构骨架示例已落地（`src/api/request.ts`、`src/features/member/`、`src/pages/member/`）并 `vp check` 通过；README 已补技能/MCP 说明与团队恢复命令；`vite.config.ts` 已排除 `.trae/**` 格式化。
 
 ## 待确认决策（均已确认）
 
@@ -156,8 +163,10 @@ npx skills experimental_install
 9. ~~**2.2 归档仓库**~~ ✅ 改用官方新技能 `remix-run/react-router@react-router`（56.6K★，活跃）。
 10. ~~**清单取舍判据**~~ ✅ **以「团队能否随仓库稳定复现」为准**：全部必需技能项目级固化，不依赖任何全局配置。
 11. ~~**MCP 一致性**~~ ✅ **是**：Trae 支持项目级 MCP，落库 `.trae/mcp.json`（带 `mcpServers` 包裹），需在设置中开启「启用项目级 MCP」。
+12. ~~**4.2 示例范围**~~ ✅ **架构骨架示例**（不搭 React 入口，沿用 vanilla 现状）。
+13. ~~**`.trae/` 格式化**~~ ✅ `vite.config.ts` 的 `fmt.ignorePatterns` 排除 `.trae/**`。
 
 ## 下一步
 
-- 阶段 2 已完成：校验通过，待提交（技能目录 + `.trae/mcp.json` + `skills-lock.json` + 本计划文档）。
-- 阶段 3（bulletproof-react 裁剪为 `react-app-architecture`）待用户指定后再执行。
+- 全部 4 个阶段已完成，本计划收尾：待提交（自建技能 + `AGENTS.md` + `vite.config.ts` + 架构骨架示例 + README + 本计划文档）。
+- 后续「React 基础框架」搭建（`docs/plans/2026-10-10-react-base-framework.md`）为独立计划，按需另行推进。
