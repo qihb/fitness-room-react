@@ -9,13 +9,21 @@ export const PERMISSION = {
   ORDER_EXPORT_EXPIRED: "order:export:expired",
   ORDER_EXPORT_COMPLETED: "order:export:completed",
   ORDER_EXPORT_CANCELLED: "order:export:cancelled",
+  /** 设备管理：新增 / 编辑 / 删除，分别独立授权。 */
+  EQUIPMENT_CREATE: "equipment:create",
+  EQUIPMENT_UPDATE: "equipment:update",
+  EQUIPMENT_DELETE: "equipment:delete",
 } as const;
 
 /**
  * mock 登录用户的默认权限：业务方仅授予「已完成」Tab 的导出权限，
  * 其余状态待业务方自行开通（真实项目应由登录接口返回权限点）。
+ * 设备管理三项默认全授予，便于本地走查；去掉任一权限点即可验证对应入口隐藏。
  */
 export const MOCK_USER_PERMISSIONS: string[] = [
   PERMISSION.ORDER_EXPORT_COMPLETED,
   PERMISSION.ORDER_EXPORT_ALL,
+  PERMISSION.EQUIPMENT_CREATE,
+  PERMISSION.EQUIPMENT_UPDATE,
+  PERMISSION.EQUIPMENT_DELETE,
 ];

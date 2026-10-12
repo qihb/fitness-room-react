@@ -69,7 +69,7 @@ export function OrderNewPage() {
           rules={[{ required: true, message: "请输入购卡年限" }]}
         >
           <InputNumber
-            className="w-full"
+            className="w-full!"
             min={MIN_YEARS}
             max={MAX_YEARS}
             precision={0}

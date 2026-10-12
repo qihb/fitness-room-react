@@ -61,7 +61,7 @@ export function RenewOrderModal({ open, orderNos, onCancel, onSuccess }: RenewOr
           rules={[{ required: true, message: "请输入续卡年限" }]}
         >
           <InputNumber
-            className="w-full"
+            className="w-full!"
             min={MIN_YEARS}
             max={MAX_YEARS}
             precision={0}

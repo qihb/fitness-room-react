@@ -398,6 +398,185 @@ function cancelOrders(config: InternalAxiosRequestConfig): AxiosResponse {
   return respond(config, { code: 0, message: "ok", data: targets });
 }
 
+/* -------------------------------- 设备管理 -------------------------------- */
+
+type MockEquipmentStatus = "inUse" | "idle" | "maintenance" | "scrapped";
+
+interface MockEquipment {
+  equipmentNo: string;
+  name: string;
+  type: string;
+  status: MockEquipmentStatus;
+  location: string;
+  purchasedAt: string;
+}
+
+/** 设备种子基准日：最新一台；其余按固定步长递减，保证排序与分页稳定可复现。 */
+const EQUIPMENT_SEED_BASE_DATE = "2026-09-25";
+
+/** 设备种子规格：共 26 台，覆盖 4 种状态与多种类型 / 位置。 */
+const EQUIPMENT_SEED_SPECS: {
+  name: string;
+  type: string;
+  status: MockEquipmentStatus;
+  location: string;
+}[] = [
+  { name: "商用跑步机 T-01", type: "跑步机", status: "inUse", location: "一层有氧区" },
+  { name: "商用跑步机 T-02", type: "跑步机", status: "inUse", location: "一层有氧区" },
+  { name: "商用跑步机 T-03", type: "跑步机", status: "maintenance", location: "一层有氧区" },
+  { name: "商用跑步机 T-04", type: "跑步机", status: "idle", location: "一层有氧区" },
+  { name: "商用跑步机 T-05", type: "跑步机", status: "scrapped", location: "一层有氧区" },
+  { name: "椭圆机 E-01", type: "椭圆机", status: "inUse", location: "一层有氧区" },
+  { name: "椭圆机 E-02", type: "椭圆机", status: "inUse", location: "一层有氧区" },
+  { name: "椭圆机 E-03", type: "椭圆机", status: "idle", location: "一层有氧区" },
+  { name: "椭圆机 E-04", type: "椭圆机", status: "maintenance", location: "一层有氧区" },
+  { name: "动感单车 S-01", type: "动感单车", status: "inUse", location: "二层操房" },
+  { name: "动感单车 S-02", type: "动感单车", status: "inUse", location: "二层操房" },
+  { name: "动感单车 S-03", type: "动感单车", status: "inUse", location: "二层操房" },
+  { name: "动感单车 S-04", type: "动感单车", status: "scrapped", location: "二层操房" },
+  { name: "划船机 R-01", type: "划船机", status: "inUse", location: "二层操房" },
+  { name: "划船机 R-02", type: "划船机", status: "idle", location: "二层操房" },
+  { name: "划船机 R-03", type: "划船机", status: "maintenance", location: "二层操房" },
+  { name: "哑铃组 D-01", type: "哑铃", status: "inUse", location: "二层自由力量区" },
+  { name: "哑铃组 D-02", type: "哑铃", status: "inUse", location: "二层自由力量区" },
+  { name: "哑铃组 D-03", type: "哑铃", status: "idle", location: "二层自由力量区" },
+  { name: "综合训练器 M-01", type: "综合训练器", status: "inUse", location: "一层力量区" },
+  { name: "综合训练器 M-02", type: "综合训练器", status: "inUse", location: "一层力量区" },
+  { name: "综合训练器 M-03", type: "综合训练器", status: "maintenance", location: "一层力量区" },
+  { name: "综合训练器 M-04", type: "综合训练器", status: "scrapped", location: "一层力量区" },
+  { name: "壶铃组 K-01", type: "哑铃", status: "inUse", location: "三层私教区" },
+  { name: "战绳 B-01", type: "划船机", status: "idle", location: "三层私教区" },
+  { name: "瑜伽球 Y-01", type: "哑铃", status: "scrapped", location: "三层私教区" },
+];
+
+/** 内存态设备台账：写操作直接改内存（刷新后重置）；编号 EQ0001 起。 */
+const equipment: MockEquipment[] = EQUIPMENT_SEED_SPECS.map((spec, index) => ({
+  equipmentNo: `EQ${String(index + 1).padStart(4, "0")}`,
+  ...spec,
+  purchasedAt: dayjs(EQUIPMENT_SEED_BASE_DATE)
+    .subtract(index * 5, "day")
+    .format("YYYY-MM-DD"),
+}));
+
+/** 自增序号：新增设备时生成唯一编号。 */
+let equipmentSeq = EQUIPMENT_SEED_SPECS.length + 1;
+
+/** 列表过滤：名称模糊 + 状态 + 类型。 */
+function filterEquipment(params: {
+  keyword?: string;
+  status?: string;
+  type?: string;
+}): MockEquipment[] {
+  let list = [...equipment];
+  const keyword = params.keyword?.trim();
+  if (keyword) {
+    list = list.filter((item) => item.name.includes(keyword));
+  }
+  if (params.status) {
+    list = list.filter((item) => item.status === params.status);
+  }
+  if (params.type) {
+    list = list.filter((item) => item.type === params.type);
+  }
+  return list;
+}
+
+/** GET /equipment：名称模糊 + 状态 / 类型筛选 + 购入日期倒序 + 分页。 */
+function listEquipment(config: InternalAxiosRequestConfig): AxiosResponse {
+  const params = (config.params ?? {}) as {
+    page?: number;
+    pageSize?: number;
+    keyword?: string;
+    status?: string;
+    type?: string;
+    order?: string;
+  };
+  const page = Number(params.page ?? 1) || 1;
+  const pageSize = Number(params.pageSize ?? 10) || 10;
+
+  const list = filterEquipment(params);
+
+  const desc = params.order !== "asc";
+  list.sort((a, b) =>
+    desc ? b.purchasedAt.localeCompare(a.purchasedAt) : a.purchasedAt.localeCompare(b.purchasedAt),
+  );
+
+  const start = (page - 1) * pageSize;
+  return respond(config, {
+    code: 0,
+    message: "ok",
+    data: { list: list.slice(start, start + pageSize), total: list.length, page, pageSize },
+  });
+}
+
+/** POST /equipment：新增设备，编号按自增序号生成。 */
+function createEquipment(config: InternalAxiosRequestConfig): AxiosResponse {
+  const body = parseBody<{
+    name: string;
+    type: string;
+    status: MockEquipmentStatus;
+    location: string;
+    purchasedAt: string;
+  }>(config);
+
+  const item: MockEquipment = {
+    equipmentNo: `EQ${String(equipmentSeq).padStart(4, "0")}`,
+    name: body.name,
+    type: body.type,
+    status: body.status,
+    location: body.location,
+    purchasedAt: body.purchasedAt,
+  };
+  equipmentSeq += 1;
+  equipment.unshift(item);
+
+  return respond(config, { code: 0, message: "ok", data: item }, 201);
+}
+
+/** POST /equipment/update：按设备编号更新，编号不存在则 400。 */
+function updateEquipment(config: InternalAxiosRequestConfig): AxiosResponse {
+  const body = parseBody<{
+    equipmentNo: string;
+    name: string;
+    type: string;
+    status: MockEquipmentStatus;
+    location: string;
+    purchasedAt: string;
+  }>(config);
+
+  const target = equipment.find((item) => item.equipmentNo === body.equipmentNo);
+  if (!target) {
+    return fail(config, `设备不存在：${body.equipmentNo}`);
+  }
+  target.name = body.name;
+  target.type = body.type;
+  target.status = body.status;
+  target.location = body.location;
+  target.purchasedAt = body.purchasedAt;
+
+  return respond(config, { code: 0, message: "ok", data: target });
+}
+
+/** POST /equipment/delete：仅「闲置」「已报废」可删，含不合格项则整体拒绝。 */
+function deleteEquipment(config: InternalAxiosRequestConfig): AxiosResponse {
+  const body = parseBody<{ equipmentNos: string[] }>(config);
+
+  const targets = equipment.filter((item) => body.equipmentNos.includes(item.equipmentNo));
+  const invalid = targets.filter((item) => item.status !== "idle" && item.status !== "scrapped");
+  if (invalid.length > 0) {
+    return fail(
+      config,
+      `以下设备不可删除（在用 / 维护中）：${invalid.map((item) => item.equipmentNo).join("、")}`,
+    );
+  }
+
+  const remaining = equipment.filter((item) => !body.equipmentNos.includes(item.equipmentNo));
+  equipment.length = 0;
+  equipment.push(...remaining);
+
+  return respond(config, { code: 0, message: "ok", data: targets });
+}
+
 export const mockAdapter: AxiosAdapter = async (config) => {
   const method = (config.method ?? "get").toLowerCase();
   const url = config.url;
@@ -406,8 +585,19 @@ export const mockAdapter: AxiosAdapter = async (config) => {
   const isExport = url === "/orders/export" && method === "get";
   const isRenew = url === "/orders/renew" && method === "post";
   const isCancel = url === "/orders/cancel" && method === "post";
+  const isEquipment = url === "/equipment";
+  const isEquipmentUpdate = url === "/equipment/update" && method === "post";
+  const isEquipmentDelete = url === "/equipment/delete" && method === "post";
 
-  if (isOrders || isExport || isRenew || isCancel) {
+  if (
+    isOrders ||
+    isExport ||
+    isRenew ||
+    isCancel ||
+    isEquipment ||
+    isEquipmentUpdate ||
+    isEquipmentDelete
+  ) {
     await delay(300);
 
     // 401 模拟：无 token 或非法 token（`Bearer invalid`）时拒绝，便于验证登录态失效流程。
@@ -430,6 +620,18 @@ export const mockAdapter: AxiosAdapter = async (config) => {
     }
     if (isCancel) {
       return cancelOrders(config);
+    }
+    if (isEquipment && method === "get") {
+      return listEquipment(config);
+    }
+    if (isEquipment && method === "post") {
+      return createEquipment(config);
+    }
+    if (isEquipmentUpdate) {
+      return updateEquipment(config);
+    }
+    if (isEquipmentDelete) {
+      return deleteEquipment(config);
     }
   }
 

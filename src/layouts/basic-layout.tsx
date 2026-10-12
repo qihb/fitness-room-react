@@ -5,10 +5,12 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   PlusOutlined,
+  ToolOutlined,
   UnorderedListOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { Avatar, Breadcrumb, Button, ConfigProvider, Dropdown, Layout, Menu, Space } from "antd";
+import type { BreadcrumbProps } from "antd";
 import { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { useAuthStore } from "@/store/auth";
@@ -18,6 +20,7 @@ const { Header, Sider, Content } = Layout;
 const menuItems = [
   { key: "/orders", icon: <UnorderedListOutlined />, label: <Link to="/orders">订单列表</Link> },
   { key: "/orders/new", icon: <PlusOutlined />, label: <Link to="/orders/new">新建订单</Link> },
+  { key: "/equipment", icon: <ToolOutlined />, label: <Link to="/equipment">设备管理</Link> },
 ];
 
 /** 后台基础布局：左侧菜单 + 顶栏（用户名/退出）+ 面包屑 + 内容区。 */
@@ -30,11 +33,21 @@ export function BasicLayout() {
 
   const isNewOrder = pathname.startsWith("/orders/new");
   const isOrderList = pathname === "/orders";
-  const isOrderRoute = isOrderList || isNewOrder;
-  const selectedKey = isNewOrder ? "/orders/new" : "/orders";
-  const breadcrumbItems = isNewOrder
-    ? [{ title: <Link to="/orders">订单列表</Link> }, { title: "新建订单" }]
-    : [{ title: "订单列表" }];
+  const isEquipment = pathname === "/equipment";
+
+  // 菜单高亮与面包屑：按当前路由分支，未命中业务路由时均留空。
+  let selectedKey = "";
+  let breadcrumbItems: BreadcrumbProps["items"] = [];
+  if (isNewOrder) {
+    selectedKey = "/orders/new";
+    breadcrumbItems = [{ title: <Link to="/orders">订单列表</Link> }, { title: "新建订单" }];
+  } else if (isOrderList) {
+    selectedKey = "/orders";
+    breadcrumbItems = [{ title: "订单列表" }];
+  } else if (isEquipment) {
+    selectedKey = "/equipment";
+    breadcrumbItems = [{ title: "设备管理" }];
+  }
 
   return (
     <Layout className="h-full">
@@ -51,7 +64,7 @@ export function BasicLayout() {
         <Menu
           theme="dark"
           mode="inline"
-          selectedKeys={isOrderRoute ? [selectedKey] : []}
+          selectedKeys={selectedKey ? [selectedKey] : []}
           items={menuItems}
         />
       </Sider>
@@ -88,7 +101,7 @@ export function BasicLayout() {
         </Header>
         {/* 面包屑条：紧贴顶栏、高 32px，背景与内容区一致（透出布局灰底）；
             Breadcrumb 无字号 token，用局部 ConfigProvider 把子树字号降为 12。 */}
-        {isOrderRoute && (
+        {breadcrumbItems.length > 0 && (
           <div className="flex h-8 shrink-0 items-center px-6">
             <ConfigProvider theme={{ token: { fontSize: 12 } }}>
               <Breadcrumb items={breadcrumbItems} />
