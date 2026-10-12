@@ -30,6 +30,7 @@ export { exportOrders, type ExportOrdersParams } from "./api/export-orders";
 export {
   calcRenewFee,
   formatAmount,
+  formatOrderLabel,
   formatOrderStatus,
   isCancellable,
   isRenewable,

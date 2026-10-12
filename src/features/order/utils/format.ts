@@ -4,11 +4,16 @@ import {
   ORDER_STATUS_TEXT,
   PRICE_PER_YEAR,
 } from "../constants";
-import type { OrderStatus } from "../types/order";
+import type { Order, OrderStatus } from "../types/order";
 
 /** 订单状态 → 展示文案。 */
 export function formatOrderStatus(status: OrderStatus): string {
   return ORDER_STATUS_TEXT[status];
+}
+
+/** 订单号 + 会员姓名，用于提示文案中区分同批订单。 */
+export function formatOrderLabel(order: Pick<Order, "orderNo" | "memberName">): string {
+  return `${order.orderNo}（${order.memberName}）`;
 }
 
 /** 金额 → 千分位展示（如 12,000.00）；空值按 0 处理。 */

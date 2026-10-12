@@ -160,7 +160,7 @@ export function OrderListPage() {
 
       <RenewOrderModal
         open={actions.renewTargets !== null}
-        orderNos={actions.renewTargets ?? []}
+        orders={actions.renewTargets ?? []}
         onCancel={actions.closeRenew}
         onSuccess={actions.onRenewSuccess}
       />

@@ -364,7 +364,7 @@ function renewOrders(config: InternalAxiosRequestConfig): AxiosResponse {
   if (invalid.length > 0) {
     return fail(
       config,
-      `以下订单不满足续卡条件：${invalid.map((order) => order.orderNo).join("、")}`,
+      `以下订单不满足续卡条件：${invalid.map((order) => `${order.orderNo}（${order.memberName}）`).join("、")}`,
     );
   }
 
@@ -387,7 +387,7 @@ function cancelOrders(config: InternalAxiosRequestConfig): AxiosResponse {
   if (invalid.length > 0) {
     return fail(
       config,
-      `以下订单不满足撤单条件：${invalid.map((order) => order.orderNo).join("、")}`,
+      `以下订单不满足撤单条件：${invalid.map((order) => `${order.orderNo}（${order.memberName}）`).join("、")}`,
     );
   }
 

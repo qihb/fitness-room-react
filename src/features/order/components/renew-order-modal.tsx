@@ -2,22 +2,24 @@ import { Alert, App as AntdApp, Form, InputNumber, Modal } from "antd";
 import { useEffect, useState } from "react";
 import { renewOrders } from "../api/renew-orders";
 import { MAX_YEARS, MIN_YEARS } from "../constants";
-import { calcRenewFee, formatAmount } from "../utils/format";
+import type { Order } from "../types/order";
+import { calcRenewFee, formatAmount, formatOrderLabel } from "../utils/format";
 
 interface RenewOrderModalProps {
   open: boolean;
-  orderNos: string[];
+  orders: Order[];
   onCancel: () => void;
   onSuccess: () => void;
 }
 
 /** 续卡弹窗：填写续卡年限并实时展示应付费用；批量与行内续卡共用。 */
-export function RenewOrderModal({ open, orderNos, onCancel, onSuccess }: RenewOrderModalProps) {
+export function RenewOrderModal({ open, orders, onCancel, onSuccess }: RenewOrderModalProps) {
   const { message } = AntdApp.useApp();
   const [form] = Form.useForm<{ years: number }>();
   const [submitting, setSubmitting] = useState(false);
   const years = Form.useWatch("years", form);
   const fee = calcRenewFee(Number(years) || 0);
+  const orderNos = orders.map((order) => order.orderNo);
 
   useEffect(() => {
     if (open) {
@@ -52,7 +54,7 @@ export function RenewOrderModal({ open, orderNos, onCancel, onSuccess }: RenewOr
         type="info"
         showIcon
         className="!mb-4"
-        message={`共 ${orderNos.length} 笔订单：${orderNos.join("、")}`}
+        message={`共 ${orders.length} 笔订单：${orders.map(formatOrderLabel).join("、")}`}
       />
       <Form form={form} layout="vertical">
         <Form.Item

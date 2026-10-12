@@ -2,7 +2,7 @@ import { App as AntdApp } from "antd";
 import { useState } from "react";
 import { cancelOrders } from "../api/cancel-orders";
 import type { Order } from "../types/order";
-import { isCancellable, isRenewable } from "../utils/format";
+import { formatOrderLabel, isCancellable, isRenewable } from "../utils/format";
 
 export interface UseOrderActionsOptions {
   /** 跨页选中行。 */
@@ -14,8 +14,8 @@ export interface UseOrderActionsOptions {
 }
 
 export interface UseOrderActionsResult {
-  /** 续卡弹窗目标单号；null 表示弹窗关闭。 */
-  renewTargets: string[] | null;
+  /** 续卡弹窗目标订单；null 表示弹窗关闭。 */
+  renewTargets: Order[] | null;
   /** 行内续卡：打开单条续卡弹窗。 */
   openRenew: (order: Order) => void;
   /** 关闭续卡弹窗。 */
@@ -37,10 +37,10 @@ export function useOrderActions({
   reload,
 }: UseOrderActionsOptions): UseOrderActionsResult {
   const { message, modal } = AntdApp.useApp();
-  const [renewTargets, setRenewTargets] = useState<string[] | null>(null);
+  const [renewTargets, setRenewTargets] = useState<Order[] | null>(null);
 
   const openRenew = (order: Order) => {
-    setRenewTargets([order.orderNo]);
+    setRenewTargets([order]);
   };
 
   const closeRenew = () => {
@@ -62,11 +62,11 @@ export function useOrderActions({
     if (invalid.length > 0) {
       modal.warning({
         title: "部分订单不满足续卡条件",
-        content: `仅「已到期」订单可续卡，以下订单不满足：${invalid.map((order) => order.orderNo).join("、")}`,
+        content: `仅「已到期」订单可续卡，以下订单不满足：${invalid.map(formatOrderLabel).join("、")}`,
       });
       return;
     }
-    setRenewTargets(selectedRows.map((order) => order.orderNo));
+    setRenewTargets(selectedRows);
   };
 
   const onBatchCancel = () => {
@@ -78,14 +78,14 @@ export function useOrderActions({
     if (invalid.length > 0) {
       modal.warning({
         title: "部分订单不满足撤单条件",
-        content: `仅「待制卡」「待寄卡」订单可撤单，以下订单不满足：${invalid.map((order) => order.orderNo).join("、")}`,
+        content: `仅「待制卡」「待寄卡」订单可撤单，以下订单不满足：${invalid.map(formatOrderLabel).join("、")}`,
       });
       return;
     }
     const orderNos = selectedRows.map((order) => order.orderNo);
     modal.confirm({
       title: "确认撤单",
-      content: `将撤销以下订单：${orderNos.join("、")}`,
+      content: `将撤销以下订单：${selectedRows.map(formatOrderLabel).join("、")}`,
       okText: "确认撤单",
       okButtonProps: { danger: true },
       onOk: async () => {
@@ -104,7 +104,7 @@ export function useOrderActions({
   const onRowCancel = (order: Order) => {
     modal.confirm({
       title: "确认撤单",
-      content: `将撤销订单：${order.orderNo}`,
+      content: `将撤销订单：${formatOrderLabel(order)}`,
       okText: "确认撤单",
       okButtonProps: { danger: true },
       onOk: async () => {
