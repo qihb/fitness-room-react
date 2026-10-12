@@ -6,6 +6,10 @@
 
 React 19 · TypeScript 6 · Vite+ 1.1 · react-router 8（Data Mode）· Ant Design 6 · axios · zustand 5 · Tailwind CSS 4。包管理器为 **pnpm**。
 
+## 部署（GitHub Pages）
+
+线上地址：<https://qihb.github.io/fitness-room-react/>
+
 ## 快速开始
 
 ### 前置要求
@@ -38,16 +42,6 @@ pnpm lhci       # 浏览器性能门禁（Lighthouse CI，需先 pnpm build）
 | `VITE_API_BASE_URL`     | 接口基础路径；默认同域 `/api`，可填绝对地址                         |
 | `VITE_API_PROXY_TARGET` | 开发代理目标；`vite dev server` 把 `/api` 转发到这里，避免跨域      |
 | `VITE_USE_MOCK`         | 是否启用前端 mock（axios adapter）；默认开启，设 `false` 走后端接口 |
-
-## 部署（GitHub Pages）
-
-线上地址：<https://qihb.github.io/fitness-room-react/>
-
-- **触发**：推送 `main` 自动构建发布，也可在 Actions 页手动触发（`workflow_dispatch`）。工作流见 `.github/workflows/deploy-pages.yml`。
-- **首次启用**：仓库 `Settings → Pages → Build and deployment → Source` 需选择 **GitHub Actions**；产物经 artifact 发布，不占用 `gh-pages` 分支。
-- **构建参数**：`VITE_BASE_PATH=/fitness-room-react/` 提供子路径 base（静态资源走绝对前缀）；`VITE_USE_MOCK=true` 保持前端 mock，纯静态即可演示。
-- **SPA 回退**：构建后把 `index.html` 复制为 `404.html`。history 路由要求任意路径都返回 `index.html`，而 Pages 无服务端重写能力，故由此回退兜底——直达 / 刷新 `/orders` 等深层路由不会 404。
-- **本地验证子路径构建**：`VITE_BASE_PATH=/fitness-room-react/ pnpm build`（不传该变量即 `/`，本地开发不受影响）。
 
 ## 目录结构
 
