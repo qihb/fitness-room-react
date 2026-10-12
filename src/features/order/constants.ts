@@ -4,6 +4,26 @@ import { PERMISSION } from "@/lib/permissions";
 /** 单价：元 / 年。 */
 export const PRICE_PER_YEAR = 1200;
 
+/** 列表页每页条数可选项。 */
+export const PAGE_SIZE_OPTIONS = [10, 20, 50];
+
+/** 列表页默认每页条数。 */
+export const DEFAULT_PAGE_SIZE = 10;
+
+/** 列表筛选 Tab：全部 / 进行中 / 已到期 / 已完成 / 已取消。 */
+export const TAB_ITEMS: { key: OrderTab; label: string }[] = [
+  { key: "all", label: "全部" },
+  { key: "inProgress", label: "进行中" },
+  { key: "expired", label: "已到期" },
+  { key: "completed", label: "已完成" },
+  { key: "cancelled", label: "已取消" },
+];
+
+/** Tab → 中文名，用于导出文件名。 */
+export const TAB_LABELS = Object.fromEntries(
+  TAB_ITEMS.map((item) => [item.key, item.label]),
+) as Record<OrderTab, string>;
+
 /** 年限下限 / 上限。 */
 export const MIN_YEARS = 1;
 export const MAX_YEARS = 10;
