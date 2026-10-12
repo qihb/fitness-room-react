@@ -50,9 +50,24 @@
 
 ---
 
+## 阶段 5 · 修复子路径下的路由（basename）
+
+**现象**：线上进入订单页后地址变成 `https://qihb.github.io/orders`（缺 `/fitness-room-react` 前缀），刷新 404。
+
+**根因**：`createBrowserRouter` 未设 `basename`，路由跳转按站点根拼接，跳出了项目子路径；且 `useLocation().pathname` 在 basename 下包含前缀，直接拿来做菜单比较 / 登录回跳会失真。
+
+- [ ] 5.1 `src/lib/navigation.ts`：导出 `BASE_PATH`（取 `import.meta.env.BASE_URL`，去尾斜杠）与 `stripBasePath()`。
+- [ ] 5.2 `src/router/index.tsx`：`createBrowserRouter(routes, { basename: BASE_PATH || "/" })`。
+- [ ] 5.3 `src/layouts/basic-layout.tsx`：菜单高亮 / 面包屑改用归一化后的 pathname 比较。
+- [ ] 5.4 `src/router/guard.tsx`：`state.from` 存归一化路径，避免登录回跳重复拼接前缀。
+- [ ] 5.5 本地验证：`VITE_BASE_PATH=/fitness-room-react/ pnpm build && pnpm preview`，在浏览器打开 `http://localhost:4173/fitness-room-react/`，检查菜单跳转 URL 带前缀、菜单高亮正常、刷新不丢；`pnpm exec vp check` + `pnpm test` 通过后提交推送。
+
+---
+
 ## 当前状态
 
 - 已确认：Pages 项目页、前端 mock、构建工具沿用 setup-vp。
 - 路由回退按推荐方案（404.html 复制），保持 BrowserRouter 不变。
 - 已完成阶段 1 / 2 / 4；`pnpm exec vp check` 通过（0 error，仅存量 `src/api/mock.ts` 复杂度 warn）。
-- 待办：3.1 由你在仓库 `Settings → Pages` 选 GitHub Actions 源（未开启前 `deploy` job 会失败，`build` job 正常）；随后做 3.3 线上走查。
+- 3.1 / 3.2 完成：Pages 已可访问首页，首次发布已触发。
+- 3.3 线上走查发现新问题 → 转入阶段 5（basename 缺失），待确认后执行。

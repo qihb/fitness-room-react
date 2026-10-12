@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router";
+import { stripBasePath } from "@/lib/navigation";
 import { useAuthStore } from "@/store/auth";
 
 /** 路由守卫骨架：未登录跳转登录页，并记录来源以便登录后回跳。 */
@@ -7,7 +8,8 @@ export function RequireAuth() {
   const location = useLocation();
 
   if (!token) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    // from 存路由内部路径（去掉部署子路径），避免回跳时重复拼接 basename。
+    return <Navigate to="/login" replace state={{ from: stripBasePath(location.pathname) }} />;
   }
 
   return <Outlet />;

@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import { BasicLayout } from "@/layouts/basic-layout";
-import { registerNavigator } from "@/lib/navigation";
+import { BASE_PATH, registerNavigator } from "@/lib/navigation";
 import { RouteErrorBoundary } from "./error-boundary";
 import { GuestOnly, RequireAuth } from "./guard";
 
@@ -10,7 +10,7 @@ import { GuestOnly, RequireAuth } from "./guard";
  *  - 异常页（403/500/404）与子页错误边界均在布局内部，渲染于内容区（保留菜单/顶栏）；
  *  - 布局及以上层级的崩溃由外层 ErrorBoundary 全屏兜底。
  */
-export const router = createBrowserRouter([
+const routes = [
   {
     path: "/login",
     Component: GuestOnly,
@@ -71,7 +71,9 @@ export const router = createBrowserRouter([
       },
     ],
   },
-]);
+];
+
+export const router = createBrowserRouter(routes, { basename: BASE_PATH || "/" });
 
 // 注册导航桥：供非路由层（如 api/request.ts）跳转，避免其直接依赖 router 形成循环。
 registerNavigator((to, options) => {

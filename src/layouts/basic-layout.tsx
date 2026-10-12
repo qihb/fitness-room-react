@@ -13,6 +13,7 @@ import { Avatar, Breadcrumb, Button, ConfigProvider, Dropdown, Layout, Menu, Spa
 import type { BreadcrumbProps } from "antd";
 import { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
+import { stripBasePath } from "@/lib/navigation";
 import { useAuthStore } from "@/store/auth";
 
 const { Header, Sider, Content } = Layout;
@@ -25,8 +26,10 @@ const menuItems = [
 
 /** 后台基础布局：左侧菜单 + 顶栏（用户名/退出）+ 面包屑 + 内容区。 */
 export function BasicLayout() {
-  const { pathname } = useLocation();
+  const { pathname: fullPathname } = useLocation();
   const navigate = useNavigate();
+  // 归一化掉部署子路径：`useLocation().pathname` 含 basename，直接比较会让菜单高亮 / 面包屑失效。
+  const pathname = stripBasePath(fullPathname);
   const [collapsed, setCollapsed] = useState(false);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
