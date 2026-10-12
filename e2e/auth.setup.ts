@@ -17,7 +17,8 @@ setup("登录并保存登录态", async ({ page }) => {
 
   await page.goto("/login");
   try {
-    await page.getByRole("button", { name: "登录" }).click();
+    // antd 会对两字按钮自动插空格（"登 录"），用正则宽松匹配避免因空格失配。
+    await page.getByRole("button", { name: /登\s*录/ }).click();
   } catch (error) {
     console.error("登录页未出现「登录」按钮，页面可见文本：");
     console.error(

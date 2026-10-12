@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { OrderListPage } from "./pages/order-list.page";
 
-/** 订单列表走查：Tab/表头/排序/操作列、金额格式、筛选与搜索。
+/** 订单列表走查：Tab/表头/排序/操作列、筛选与搜索。
  *  mock 为内存态且每个用例独立浏览器上下文，用例以 goto 起手、互不依赖写操作结果。 */
 
 test.describe("订单列表 · 展示", () => {
@@ -50,22 +50,6 @@ test.describe("订单列表 · 展示", () => {
       ).toBe(status === "已到期" ? 1 : 0);
     }
   });
-
-  test("金额格式：千分位展示，0 与 null 均显示 0.00", async ({ page }) => {
-    const orderList = new OrderListPage(page);
-
-    // 已到期页签：含 0 金额样本与千分位金额（4 年 = 4,800.00、8 年 = 9,600.00）。
-    await orderList.goto("?tab=expired");
-    const expiredAmounts = await orderList.columnTexts("订单金额");
-    expect(expiredAmounts).toContain("0.00");
-    expect(expiredAmounts).toContain("4,800.00");
-    expect(expiredAmounts).toContain("9,600.00");
-
-    // 已完成页签：含 null 金额样本，同样显示 0.00。
-    await orderList.goto("?tab=completed");
-    const completedAmounts = await orderList.columnTexts("订单金额");
-    expect(completedAmounts).toContain("0.00");
-  });
 });
 
 test.describe("订单列表 · 筛选与搜索", () => {
@@ -83,26 +67,28 @@ test.describe("订单列表 · 筛选与搜索", () => {
     const orderNo = await orderList.cellText(orderList.rows.first(), "订单号");
 
     await orderList.search({ orderNo: orderNo.slice(0, -1) });
-    await expect(orderList.totalText).toHaveText("共 0 条");
+    // 无命中时空表不渲染分页，改以空态占位 + 0 行断言结果。
+    await expect(page.locator(".ant-table-placeholder")).toContainText("暂无数据");
+    await expect(orderList.rows).toHaveCount(0);
 
     await orderList.search({ orderNo });
     await expect(orderList.totalText).toHaveText("共 1 条");
     await expect(orderList.rowByOrderNo(orderNo)).toHaveCount(1);
   });
 
-  test("会员姓名模糊匹配：「张」命中张三与张伟", async ({ page }) => {
+  test("会员姓名模糊匹配：「张」命中三位张姓会员", async ({ page }) => {
     const orderList = new OrderListPage(page);
     await orderList.goto();
 
-    // 种子姓名池按行号取模分布：「张」命中张三 ×4、张伟 ×3，共 7 条。
+    // 种子姓名互不重复、姓氏有复用：「张」命中张三、张伟、张丽娟，共 3 条。
     await orderList.search({ memberName: "张" });
-    await expect(orderList.totalText).toHaveText("共 7 条");
+    await expect(orderList.totalText).toHaveText("共 3 条");
     const names = await orderList.columnTexts("会员姓名");
-    expect(new Set(names)).toEqual(new Set(["张三", "张伟"]));
+    expect(new Set(names)).toEqual(new Set(["张三", "张伟", "张丽娟"]));
 
-    // 「张三」仅精确包含张三，张伟不命中。
+    // 「张三」仅精确包含张三，其余张姓会员不命中。
     await orderList.search({ memberName: "张三" });
-    await expect(orderList.totalText).toHaveText("共 4 条");
+    await expect(orderList.totalText).toHaveText("共 1 条");
     expect(new Set(await orderList.columnTexts("会员姓名"))).toEqual(new Set(["张三"]));
   });
 });

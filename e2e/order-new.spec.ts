@@ -5,7 +5,8 @@ import { expect, test } from "@playwright/test";
 test.describe("新建订单", () => {
   test("空表单提交展示三项必填校验", async ({ page }) => {
     await page.goto("/orders/new");
-    await page.getByRole("button", { name: "提交" }).click();
+    // antd 会对两字按钮自动插空格（"提 交"），用正则宽松匹配避免因空格失配。
+    await page.getByRole("button", { name: /提\s*交/ }).click();
     await expect(page.getByText("请输入会员姓名")).toBeVisible();
     await expect(page.getByText("请输入联系手机号")).toBeVisible();
     await expect(page.getByText("请输入购卡年限")).toBeVisible();
@@ -28,7 +29,7 @@ test.describe("新建订单", () => {
     await expect(feeInput).toHaveValue("2,400.00 元");
     await expect(feeInput).toHaveAttribute("readonly", "");
 
-    await page.getByRole("button", { name: "提交" }).click();
+    await page.getByRole("button", { name: /提\s*交/ }).click();
     await expect(page.locator(".ant-message")).toContainText("订单创建成功");
     await expect(page).toHaveURL(/\/orders$/);
 

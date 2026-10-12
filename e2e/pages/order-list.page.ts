@@ -1,4 +1,4 @@
-import type { Locator, Page, Response } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 /**
  * 订单列表页 Page Object：集中封装选择器与常用动作，避免各 spec 散落选择器。
@@ -20,21 +20,20 @@ export class OrderListPage {
     this.batchCancelButton = page.getByRole("button", { name: "一键撤单" });
   }
 
-  /** 打开订单列表（可带 URL search params），并等待首屏列表请求返回。 */
+  /** 打开订单列表（可带 URL search params），并等待首屏列表加载完成。 */
   async goto(params = ""): Promise<void> {
-    const listLoaded = this.waitForListResponse();
     await this.page.goto(`/orders${params}`);
-    await listLoaded;
+    await this.waitForFirstLoad();
   }
 
-  /** 切换状态页签（触发列表重新请求，等待返回后再继续断言）。 */
+  /** 切换状态页签（触发列表重新请求，等待加载完成后再继续断言）。 */
   async switchTab(label: string): Promise<void> {
-    const listLoaded = this.waitForListResponse();
+    const settled = this.waitForListIdle();
     await this.page.getByRole("tab", { name: label }).click();
-    await listLoaded;
+    await settled;
   }
 
-  /** 填写搜索表单并查询（触发列表重新请求，等待返回后再继续断言）。 */
+  /** 填写搜索表单并查询（触发列表重新请求，等待加载完成后再继续断言）。 */
   async search(values: { orderNo?: string; memberName?: string }): Promise<void> {
     if (values.orderNo !== undefined) {
       await this.page.getByLabel("订单号").fill(values.orderNo);
@@ -42,9 +41,9 @@ export class OrderListPage {
     if (values.memberName !== undefined) {
       await this.page.getByLabel("会员姓名").fill(values.memberName);
     }
-    const listLoaded = this.waitForListResponse();
+    const settled = this.waitForListIdle();
     await this.page.getByRole("button", { name: "查询" }).click();
-    await listLoaded;
+    await settled;
   }
 
   /** 按订单号定位唯一数据行。 */
@@ -91,12 +90,24 @@ export class OrderListPage {
     throw new Error(`未找到表头列：${columnTitle}`);
   }
 
-  /** 等待下一次订单列表 GET 请求返回（mock adapter 走 fetch/XHR，URL 为 /api/orders）。 */
-  private waitForListResponse(): Promise<Response> {
-    return this.page.waitForResponse(
-      (response) =>
-        response.request().method() === "GET" &&
-        new URL(response.url()).pathname.endsWith("/orders"),
-    );
+  /**
+   * 等待整页导航后的首屏加载完成。
+   * 与页内动作不同，`page.goto` 可能在加载态结束后才 resolve（并行跑用例时更明显），
+   * 因此不以「观察到 spin 出现」为前提，改为：等骨架（表头）出现 → 等加载态（`.ant-spin-spinning`）消失。
+   */
+  private async waitForFirstLoad(): Promise<void> {
+    await this.page.locator(".ant-table-thead th").first().waitFor({ state: "visible" });
+    await this.page.locator(".ant-spin-spinning").waitFor({ state: "hidden" });
+  }
+
+  /**
+   * 等待页内动作（切 Tab / 查询）触发的列表加载态「出现再消失」。
+   * 页面用 `<Spin spinning={loading}>` 包裹表格，加载中会有 `.ant-spin-spinning`。
+   * mock 走 axios adapter、请求不产生真实网络流量，`waitForResponse` 观测不到，故改用页面加载态判定。
+   */
+  private async waitForListIdle(): Promise<void> {
+    const spinner = this.page.locator(".ant-spin-spinning");
+    await spinner.waitFor({ state: "visible" });
+    await spinner.waitFor({ state: "hidden" });
   }
 }

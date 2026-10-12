@@ -48,7 +48,9 @@ test.describe("批量续卡", () => {
     await expect(orderList.totalText).toHaveText("共 6 条");
 
     // 回查详情：年限累加 5 年，状态转为待审核。
-    await orderList.goto(`?orderNo=${firstNo}`);
+    // 用页内导航（切 Tab + 搜索）而非 page.goto：整页重载会重置内存态 mock 并重新洗牌种子。
+    await orderList.switchTab("全部");
+    await orderList.search({ orderNo: firstNo });
     const renewedRow = orderList.rowByOrderNo(firstNo);
     expect(await orderList.cellText(renewedRow, "购卡年限")).toBe(`${firstYears + 5} 年`);
     expect(await orderList.cellText(renewedRow, "状态")).toBe("待审核");
@@ -94,7 +96,8 @@ test.describe("一键撤单", () => {
     await expect(orderList.totalText).toHaveText("共 22 条");
 
     // 「已取消」页签可见两条新撤订单（原 4 条 + 新撤 2 条 = 6 条）。
-    await orderList.goto("?tab=cancelled");
+    // 页内切 Tab，避免整页重载重置 mock 内存态。
+    await orderList.switchTab("已取消");
     await expect(orderList.totalText).toHaveText("共 6 条");
     await expect(orderList.rowByOrderNo(cardNo).locator(".ant-tag")).toHaveText("已取消");
     await expect(orderList.rowByOrderNo(shipNo).locator(".ant-tag")).toHaveText("已取消");
@@ -111,11 +114,11 @@ test.describe("行内续卡", () => {
     for (let i = 0; i < rowCount; i += 1) {
       await expect(orderList.rows.nth(i).getByRole("button", { name: "续卡" })).toHaveCount(1);
     }
-    await orderList.goto("?tab=completed");
+    await orderList.switchTab("已完成");
     await expect(page.getByRole("button", { name: "续卡" })).toHaveCount(0);
 
     // 行内续卡 1 年：1 × 1200 = 1,200.00。
-    await orderList.goto("?tab=expired");
+    await orderList.switchTab("已到期");
     const row = orderList.rows.first();
     const orderNo = await orderList.cellText(row, "订单号");
     const years = Number((await orderList.cellText(row, "购卡年限")).replace(/\D/g, ""));
@@ -130,7 +133,9 @@ test.describe("行内续卡", () => {
     await expect(page.locator(".ant-message")).toContainText("已完成 1 笔订单续卡");
     await expect(orderList.totalText).toHaveText("共 7 条");
 
-    await orderList.goto(`?orderNo=${orderNo}`);
+    // 页内导航，避免整页重载重置 mock 内存态。
+    await orderList.switchTab("全部");
+    await orderList.search({ orderNo });
     const renewedRow = orderList.rowByOrderNo(orderNo);
     expect(await orderList.cellText(renewedRow, "购卡年限")).toBe(`${years + 1} 年`);
     expect(await orderList.cellText(renewedRow, "状态")).toBe("待审核");
