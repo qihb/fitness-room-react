@@ -1,0 +1,9 @@
+{
+  "threshold": 8,
+  "minTokens": 50,
+  "format": ["typescript", "tsx"],
+  "ignore": ["**/*.test.ts", "**/*.test.tsx", "**/api/mock.ts", "**/node_modules/**", "**/dist/**"],
+  "reporters": ["console", "html"],
+  "output": ".jscpd",
+  "absolute": true
+}

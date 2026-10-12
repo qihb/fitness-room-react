@@ -13,7 +13,11 @@ pnpm install
 pnpm dev        # 本地开发（默认 http://localhost:5173）
 pnpm build      # 构建（tsc && vp build）
 pnpm test       # 运行测试（Vitest）
+pnpm e2e        # E2E 测试（Playwright；首次需 pnpm exec playwright install chromium）
 pnpm exec vp check   # 格式化 + lint + 类型检查
+pnpm depcruise  # 依赖关系门禁（循环 / 孤立 / 分层）
+pnpm cpd        # 重复率门禁（jscpd）
+pnpm lhci       # 浏览器性能门禁（Lighthouse CI，需先 pnpm build）
 ```
 
 克隆后如恢复 AI 技能，见文末「AI 技能与 MCP」。

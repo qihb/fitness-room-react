@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import { BasicLayout } from "@/layouts/basic-layout";
+import { registerNavigator } from "@/lib/navigation";
 import { RouteErrorBoundary } from "./error-boundary";
 import { GuestOnly, RequireAuth } from "./guard";
 
@@ -71,3 +72,8 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
+
+// 注册导航桥：供非路由层（如 api/request.ts）跳转，避免其直接依赖 router 形成循环。
+registerNavigator((to, options) => {
+  void router.navigate(to, options);
+});

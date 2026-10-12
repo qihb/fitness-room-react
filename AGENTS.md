@@ -22,6 +22,9 @@
 - 构建：`pnpm build`（即 `tsc && vp build`）
 - 测试：`pnpm test`（即 `vp test`，Vitest；测试文件 `src/**/*.test.{ts,tsx}`）
 - E2E 测试：`pnpm e2e`（Playwright；用例在 `e2e/`，首次需 `pnpm exec playwright install chromium`；`pnpm e2e:ui` 打开调试 UI；`pnpm test` 与 E2E 互不影响）
+- 依赖关系门禁：`pnpm depcruise`（dependency-cruiser；循环 / 孤立 / 分层守卫；配置 `.dependency-cruiser.cjs`，需 Node ≥22）
+- 重复率门禁：`pnpm cpd`（jscpd；阈值见 `.jscpd.json`）
+- 浏览器性能门禁：`pnpm lhci`（Lighthouse CI；需先 `pnpm build` 并具备可用 Chrome，配置 `.lighthouserc.cjs`）
 - 校验（格式化 + lint + 类型）：`pnpm exec vp check`
 - 已安装全局 Vite+ CLI 时可直接用 `vp dev` / `vp check` 等；未安装时改用 `pnpm exec vp <command>`。
 - 只允许使用 pnpm，禁止 npm / yarn。

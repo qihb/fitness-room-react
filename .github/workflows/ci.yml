@@ -17,6 +17,12 @@ jobs:
       - name: 代码校验（格式 + lint + 类型检查）
         run: vp check
 
+      - name: 依赖关系门禁（循环 / 孤立 / 分层）
+        run: pnpm depcruise
+
+      - name: 重复率门禁
+        run: pnpm cpd
+
       - name: 单元测试
         run: vp test
 
@@ -33,4 +39,38 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report/
+          retention-days: 7
+
+  # 浏览器性能门禁：耗时且依赖 Chrome，单列 job 与 ci 并行，互不阻塞。
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: voidzero-dev/setup-vp@v1.21.2
+        with:
+          node-version: 24
+          cache: true
+
+      - name: 生产构建
+        run: pnpm build
+
+      # ubuntu-latest 预装 Google Chrome。把其路径同时交给：
+      #  - chrome-launcher（读 CHROME_PATH）
+      #  - 鉴权脚本所用的 puppeteer-core（读 PUPPETEER_EXECUTABLE_PATH）
+      - name: 解析 Chrome 路径
+        run: |
+          CHROME="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          echo "CHROME_PATH=$CHROME" >> "$GITHUB_ENV"
+          echo "PUPPETEER_EXECUTABLE_PATH=$CHROME" >> "$GITHUB_ENV"
+
+      - name: 浏览器性能检测（Lighthouse CI）
+        run: pnpm lhci
+
+      - name: 上传 Lighthouse 报告
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/
           retention-days: 7

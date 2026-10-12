@@ -18,6 +18,10 @@ playwright-report
 blob-report
 playwright/.auth
 
+# 质量门禁报告产物
+.jscpd
+.lighthouseci
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

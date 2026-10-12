@@ -37,7 +37,17 @@ export default defineConfig(({ mode }) => {
       // 默认插件为 eslint/typescript/unicorn/oxc，设置 plugins 会覆盖默认集，故需显式列全。
       plugins: ["eslint", "typescript", "unicorn", "oxc", "react"],
       jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
-      rules: { "vite-plus/prefer-vite-plus-imports": "error" },
+      rules: {
+        "vite-plus/prefer-vite-plus-imports": "error",
+        // 复杂度与规模门禁：首轮先 warn 摸底存量超标量，确认后再统一收紧为 error。
+        complexity: ["warn", 15],
+        "max-depth": ["warn", 4],
+        "max-nested-callbacks": ["warn", 4],
+        "max-params": ["warn", 4],
+        "max-lines": ["warn", { max: 600, skipBlankLines: true, skipComments: true }],
+        "max-lines-per-function": ["warn", { max: 160, skipBlankLines: true, skipComments: true }],
+        "max-statements": ["warn", 60],
+      },
       options: { typeAware: true, typeCheck: true },
     },
   };

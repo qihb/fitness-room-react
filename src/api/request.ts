@@ -1,5 +1,5 @@
 import axios from "axios";
-import { router } from "@/router";
+import { navigateTo } from "@/lib/navigation";
 import { useAuthStore } from "@/store/auth";
 import { feedback } from "./feedback";
 import { mockAdapter } from "./mock";
@@ -44,7 +44,7 @@ request.interceptors.response.use(
         handlingUnauthorized = true;
         useAuthStore.getState().logout();
         feedback.error("登录已过期，请重新登录");
-        void router.navigate("/login", { replace: true });
+        navigateTo("/login", { replace: true });
         // 跳转后复位，允许新会话再次触发。
         window.setTimeout(() => {
           handlingUnauthorized = false;
