@@ -41,7 +41,7 @@
 ## 阶段 3 · 仓库侧开启 Pages 并首次发布
 
 - [ ] 3.1 由你操作：仓库 `Settings → Pages → Build and deployment → Source` 选 **GitHub Actions**。
-- [ ] 3.2 提交并推送 `main`，触发 workflow；确认 Actions 绿、`https://qihb.github.io/fitness-room-react/` 可打开。
+- [x] 3.2 已提交并推送 `main`（commit `18cf812`）触发 workflow；本机 `gh` CLI 不可用，Actions 结果与站点可访问性由你在网页端确认。
 - [ ] 3.3 走查站点：登录页 → 订单列表 → 设备管理；直接访问/刷新 `/fitness-room-react/orders` 不 404；控制台无资源 404。
 
 ## 阶段 4（可选）· 文档补充
@@ -55,4 +55,4 @@
 - 已确认：Pages 项目页、前端 mock、构建工具沿用 setup-vp。
 - 路由回退按推荐方案（404.html 复制），保持 BrowserRouter 不变。
 - 已完成阶段 1 / 2 / 4；`pnpm exec vp check` 通过（0 error，仅存量 `src/api/mock.ts` 复杂度 warn）。
-- 待办：3.1 由你在仓库 `Settings → Pages` 选 GitHub Actions 源；3.2 提交并推送 `main` 触发首次发布；3.3 线上走查。
+- 待办：3.1 由你在仓库 `Settings → Pages` 选 GitHub Actions 源（未开启前 `deploy` job 会失败，`build` job 正常）；随后做 3.3 线上走查。
