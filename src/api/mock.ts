@@ -50,7 +50,7 @@ const TAB_STATUS: Record<string, MockStatus[]> = {
 /** 种子基准日：最新一条；其余按天递减，保证排序与分页稳定可复现。 */
 const SEED_BASE_DATE = "2026-10-11 09:00";
 
-/** 会员姓名池：故意保留少量重名，便于「姓名模糊搜索」演示。 */
+/** 会员姓名池：42 个互不重复的姓名（含少量三字名；姓氏有复用，便于「姓名模糊搜索」演示多命中）。 */
 const MEMBER_NAMES = [
   "张三",
   "李四",
@@ -64,6 +64,36 @@ const MEMBER_NAMES = [
   "王芳",
   "李娜",
   "张伟",
+  "徐婷",
+  "胡军",
+  "朱琳",
+  "高翔",
+  "林峰",
+  "何洁",
+  "郭强",
+  "罗敏",
+  "梁静",
+  "宋佳",
+  "唐勇",
+  "许晴",
+  "邓超",
+  "冯刚",
+  "彭丽",
+  "潘婷",
+  "田亮",
+  "董洁",
+  "袁泉",
+  "于洋",
+  "余敏",
+  "叶子",
+  "杜鹏",
+  "王建国",
+  "李国强",
+  "张丽娟",
+  "刘志伟",
+  "陈嘉怡",
+  "杨春林",
+  "黄雅琴",
 ];
 
 interface SeedSpec {
@@ -147,12 +177,12 @@ function shuffle<T>(list: readonly T[]): T[] {
   return result;
 }
 
-/** 种子数据：6 种状态全覆盖（洗牌随机分布），含 0 / null 金额与重名会员。 */
+/** 种子数据：6 种状态全覆盖（洗牌随机分布），含 0 / null 金额；会员姓名互不重复。 */
 const seedOrders: MockOrder[] = shuffle(SEED_SPECS).map((spec, index) => {
   const date = dayjs(SEED_BASE_DATE).subtract(index, "day");
   return {
     orderNo: `${date.format("YYYYMMDD")}${String(index + 1).padStart(3, "0")}`,
-    memberName: MEMBER_NAMES[index % MEMBER_NAMES.length],
+    memberName: MEMBER_NAMES[index],
     phone: `138${String(10000000 + index)}`,
     years: spec.years,
     amount: spec.amount === undefined ? calcAmount(spec.years) : spec.amount,

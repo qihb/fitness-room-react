@@ -3,6 +3,10 @@ import type { Locator, Page } from "@playwright/test";
 /**
  * 订单列表页 Page Object：集中封装选择器与常用动作，避免各 spec 散落选择器。
  * 行定位基于 `tbody tr.ant-table-row`（数据行），单元格按表头名解析列索引。
+ *
+ * 列表加载同步：mock 走 axios adapter、请求不产生真实网络流量，`waitForResponse` 观测不到，
+ * 故用页面加载态（`.ant-spin-spinning`）判定；为避免轮询漏看约 300ms 的短暂加载态，
+ * 改为「动作前记录探针基线 → 动作后等基线增长」的单调计数方案（见 `trackListLoading`）。
  */
 export class OrderListPage {
   readonly page: Page;
@@ -20,17 +24,30 @@ export class OrderListPage {
     this.batchCancelButton = page.getByRole("button", { name: "一键撤单" });
   }
 
+  /** 注册加载态探针；须在首次导航前调用（`goto` 已内置），重复调用安全。 */
+  async installTracking(): Promise<void> {
+    await this.page.addInitScript(trackListLoading);
+  }
+
   /** 打开订单列表（可带 URL search params），并等待首屏列表加载完成。 */
   async goto(params = ""): Promise<void> {
+    await this.installTracking();
     await this.page.goto(`/orders${params}`);
-    await this.waitForFirstLoad();
+    await this.waitForListReady();
+  }
+
+  /**
+   * 等待列表就绪：表头出现 + 完成至少一次加载周期（首屏数据已渲染）。
+   * 也用于客户端路由跳转到列表页后的等待——确保挂载回填 effect 已执行，避免其清空即将输入的值。
+   */
+  async waitForListReady(): Promise<void> {
+    await this.page.locator(".ant-table-thead th").first().waitFor({ state: "visible" });
+    await this.waitForLoadingCycle(0);
   }
 
   /** 切换状态页签（触发列表重新请求，等待加载完成后再继续断言）。 */
   async switchTab(label: string): Promise<void> {
-    const settled = this.waitForListIdle();
-    await this.page.getByRole("tab", { name: label }).click();
-    await settled;
+    await this.runAndSettle(() => this.page.getByRole("tab", { name: label }).click());
   }
 
   /** 填写搜索表单并查询（触发列表重新请求，等待加载完成后再继续断言）。 */
@@ -41,9 +58,7 @@ export class OrderListPage {
     if (values.memberName !== undefined) {
       await this.page.getByLabel("会员姓名").fill(values.memberName);
     }
-    const settled = this.waitForListIdle();
-    await this.page.getByRole("button", { name: "查询" }).click();
-    await settled;
+    await this.runAndSettle(() => this.page.getByRole("button", { name: "查询" }).click());
   }
 
   /** 按订单号定位唯一数据行。 */
@@ -90,24 +105,74 @@ export class OrderListPage {
     throw new Error(`未找到表头列：${columnTitle}`);
   }
 
-  /**
-   * 等待整页导航后的首屏加载完成。
-   * 与页内动作不同，`page.goto` 可能在加载态结束后才 resolve（并行跑用例时更明显），
-   * 因此不以「观察到 spin 出现」为前提，改为：等骨架（表头）出现 → 等加载态（`.ant-spin-spinning`）消失。
-   */
-  private async waitForFirstLoad(): Promise<void> {
-    await this.page.locator(".ant-table-thead th").first().waitFor({ state: "visible" });
-    await this.page.locator(".ant-spin-spinning").waitFor({ state: "hidden" });
+  /** 执行会触发列表重新请求的动作，并等待「加载态出现→消失」完成一轮。 */
+  private async runAndSettle(action: () => Promise<void>): Promise<void> {
+    const baseline = await this.loadingCycles();
+    await action();
+    await this.waitForLoadingCycle(baseline);
   }
 
-  /**
-   * 等待页内动作（切 Tab / 查询）触发的列表加载态「出现再消失」。
-   * 页面用 `<Spin spinning={loading}>` 包裹表格，加载中会有 `.ant-spin-spinning`。
-   * mock 走 axios adapter、请求不产生真实网络流量，`waitForResponse` 观测不到，故改用页面加载态判定。
-   */
-  private async waitForListIdle(): Promise<void> {
-    const spinner = this.page.locator(".ant-spin-spinning");
-    await spinner.waitFor({ state: "visible" });
-    await spinner.waitFor({ state: "hidden" });
+  private async loadingCycles(): Promise<number> {
+    return this.page.evaluate(
+      () => (window as unknown as { __listLoading?: ListLoadingState }).__listLoading?.cycles ?? 0,
+    );
+  }
+
+  /** 等待加载态周期计数超过基线且当前不在加载中（探针未注册时会超时并快速暴露问题）。 */
+  private async waitForLoadingCycle(since: number): Promise<void> {
+    await this.page.waitForFunction(
+      (baseline) => {
+        const state = (window as unknown as { __listLoading?: ListLoadingState }).__listLoading;
+        return state !== undefined && state.cycles > baseline && !state.active;
+      },
+      since,
+      { timeout: LOADING_WAIT_MS },
+    );
   }
 }
+
+/** 加载态探针状态：`cycles` 为「加载态出现→消失」的完成次数（单调递增），`active` 为当前是否加载中。 */
+interface ListLoadingState {
+  cycles: number;
+  active: boolean;
+}
+
+/** 加载态等待上限：远小于用例超时（90s），超时即抛错，便于快速定位「查询未触发请求」。 */
+const LOADING_WAIT_MS = 15_000;
+
+/**
+ * 注入页面的加载态探针（须在首次导航前经 `addInitScript` 注册）。
+ * 用 `MutationObserver` 记录 `.ant-spin-spinning` 的「出现→消失」周期并累加计数。
+ * 计数单调递增，用例可「先记基线、动作后等计数增长」，从而不会漏看短暂加载态。
+ */
+export const trackListLoading = () => {
+  const target = window as unknown as { __listLoading?: ListLoadingState };
+  // 重复注册（构造函数与 beforeEach 各一次）时复用同一状态对象，避免计数被重置。
+  if (target.__listLoading) {
+    return;
+  }
+  const state: ListLoadingState = { cycles: 0, active: false };
+  target.__listLoading = state;
+
+  const isSpinning = () => document.querySelector(".ant-spin-spinning") !== null;
+  state.active = isSpinning();
+
+  const observer = new MutationObserver(() => {
+    const spinning = isSpinning();
+    if (spinning === state.active) {
+      return;
+    }
+    if (spinning) {
+      state.active = true;
+    } else {
+      state.active = false;
+      state.cycles += 1;
+    }
+  });
+  observer.observe(document, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+};
