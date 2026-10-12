@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
   return {
+    // 部署子路径：GitHub Pages 项目页等场景经该变量注入（如 /fitness-room-react/）；
+    // 本地开发与其他环境缺省为 "/"。
+    base: process.env.VITE_BASE_PATH || "/",
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

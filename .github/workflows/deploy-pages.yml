@@ -1,0 +1,63 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # 支持手动重发（如改完 Pages 设置后无需空提交）。
+  workflow_dispatch:
+
+# Pages 发布所需最小权限：读代码 + 写 Pages + OIDC 令牌。
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只保留一次发布：排队执行而非取消，避免线上产物与最新提交不一致。
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # 与 ci.yml 一致：装 vp、按 devEngines 选 Node 24、缓存依赖并自动执行 vp install。
+      - uses: voidzero-dev/setup-vp@v1.21.2
+        with:
+          node-version: 24
+          cache: true
+
+      # 子路径 base：项目页地址为 https://<user>.github.io/<repo>/，静态资源须带该前缀。
+      # mock 保持开启：纯静态演示，不依赖后端接口。
+      - name: 生产构建
+        run: pnpm build
+        env:
+          VITE_BASE_PATH: /fitness-room-react/
+          VITE_USE_MOCK: "true"
+
+      # SPA 回退：history 模式要求任意深层路径都返回 index.html，而 Pages 无重写能力。
+      # 未命中文件时 Pages 会返回根目录 404.html，其内容与 index.html 一致，
+      # 浏览器 URL 不变，交由 React Router 按当前路径渲染。
+      - name: 生成 SPA 回退页（404.html）
+        run: cp dist/index.html dist/404.html
+
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+
+      - name: 上传构建产物
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 发布到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
