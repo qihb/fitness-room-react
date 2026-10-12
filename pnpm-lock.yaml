@@ -203,6 +203,9 @@ catalogs:
     jscpd:
       specifier: ^5.4.1
       version: 5.4.1
+    puppeteer-core:
+      specifier: ^24.43.1
+      version: 24.43.1
     react:
       specifier: ^19.3.0
       version: 19.3.0
@@ -284,6 +287,9 @@ importers:
       jscpd:
         specifier: 'catalog:'
         version: 5.4.1
+      puppeteer-core:
+        specifier: 'catalog:'
+        version: 24.43.1(supports-color@7.2.0)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.3

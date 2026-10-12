@@ -19,6 +19,7 @@ catalog:
   dependency-cruiser: ^18.5.0
   jscpd: ^5.4.1
   "@lhci/cli": ^0.15.1
+  puppeteer-core: ^24.43.1
 overrides:
   vite@*: "catalog:"
 peerDependencyRules:

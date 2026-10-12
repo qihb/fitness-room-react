@@ -1,12 +1,38 @@
+const fs = require("node:fs");
+
 /**
  * Lighthouse CI 配置：对登录后的订单列表页做性能体检。
  * - `startServerCommand` 起预览服务（构建产物），固定 4173 端口；
  * - `puppeteerScript` 在跑分前写入 mock 登录态，使被测页为 `/orders` 而非登录页；
  * - 断言阈值先 `warn`（dashboard 首屏 + mock 波动大），跑稳后再统一转 `error`。
  */
+
+/**
+ * 解析跑分用的 Chrome/Chromium 可执行文件。
+ * LHCI 依赖的 chrome-launcher 只扫系统标准路径，不会找 Playwright 的缓存目录，
+ * 故这里显式指定：优先 `CHROME_PATH`，其次复用 Playwright 已下载的 Chromium，最后兜底系统 Chrome。
+ * 动态解析可避免硬编码 `chromium-<版本号>` 这类随安装漂移的路径。
+ */
+function resolveChromePath() {
+  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+
+  try {
+    // @playwright/test 为本项目直接依赖，其 chromium 即 `Google Chrome for Testing`。
+    const { chromium } = require("@playwright/test");
+    const executablePath = chromium.executablePath();
+    if (fs.existsSync(executablePath)) return executablePath;
+  } catch {
+    // 未安装 Playwright 浏览器时忽略，继续走系统 Chrome 兜底。
+  }
+
+  const systemChrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  return fs.existsSync(systemChrome) ? systemChrome : undefined;
+}
+
 module.exports = {
   ci: {
     collect: {
+      chromePath: resolveChromePath(),
       startServerCommand: "pnpm preview --port 4173 --strictPort",
       // vp 的就绪横幅带 ANSI 颜色（`Local:` 被转义码拆开），故匹配不含颜色的 URL 片段。
       startServerReadyPattern: "http://localhost",

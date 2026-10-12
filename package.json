@@ -35,6 +35,7 @@
     "@vitejs/plugin-react": "catalog:",
     "dependency-cruiser": "catalog:",
     "jscpd": "catalog:",
+    "puppeteer-core": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "~6.0.2",
     "vite": "catalog:",
@@ -45,6 +46,11 @@
       "name": "pnpm",
       "version": "12.10.1",
       "onFail": "download"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "^24.11.0",
+      "onFail": "error"
     }
   }
 }
