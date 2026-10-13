@@ -28,6 +28,7 @@ pnpm install
 pnpm dev        # 本地开发（默认 http://localhost:5173）
 pnpm build      # 构建（tsc && vp build）
 pnpm test       # 运行测试（Vitest）
+pnpm test:coverage # 运行测试并生成覆盖率报告
 pnpm e2e        # E2E 测试（Playwright；首次需 pnpm exec playwright install chromium）
 pnpm exec vp check   # 格式化 + lint + 类型检查
 pnpm depcruise  # 依赖关系门禁（循环 / 孤立 / 分层）
